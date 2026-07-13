@@ -2,6 +2,8 @@
 
 Working title: TBD. Mobile (iOS + Android). Anime volleyball gacha where the **gameplay is the product** and the gacha/meta wraps around it.
 
+**Companion docs** (PLAN.md wins conflicts; each doc names its owners): `docs/m0-gameplay-spec.md` rally engine math · `docs/story-bible.md` world/roster · `docs/economy-progression.md` all numbers · `docs/data-schemas.md` data/tests · `docs/m0-hardening.md` device floor/telemetry/audio · `docs/ui-screens.md` screens/pull ceremony · `docs/tooling-pipeline.md` content pipeline/balance sim/bootstrap · `docs/art-budget.md` costs/calendar · `docs/compliance-localization.md` ratings/privacy/localization
+
 ---
 
 ## 1. Vision & Pillars
@@ -211,7 +213,7 @@ Time is deliberately front-loaded into M0/M1 per the one rule: **gameplay first.
 
 | Milestone | Scope | Gate |
 |---|---|---|
-| **M0 — Feel prototype** (grey-box, the long pole) | Ball physics, full contact chain (serve/receive/set/spike/block), quality cascade, basic AI, slow-mo + camera director v1, portrait-vs-landscape A/B | **The Gate:** 10-rally exchanges vs AI are tense and fun with capsule players and zero meta. Not passed → iterate here, touch nothing else |
+| **M0 — Feel prototype** (grey-box, the long pole) | Ball physics, full contact chain (serve/receive/set/spike/block), quality cascade, basic AI, slow-mo + camera director v1, portrait-vs-landscape A/B, rally telemetry (JSONL) + feel-gate charts, placeholder audio incl. Hype music layers, device-floor perf protocol (docs/m0-hardening.md) | **The Gate:** 10-rally exchanges vs AI are tense and fun with capsule players and zero meta. Not passed → iterate here, touch nothing else |
 | **M1 — Full match** | Scoring, rotations, libero, match flow, 3 difficulty tiers, HUD, Hype meter + Ignition, SFX pass, crash reporting | Complete 3–5 min match holds attention; difficulty tiers distinguishable blindfolded |
 | **M2 — Meta skeleton** | Character data model, lineup builder w/ bond links, local gacha + pity (seeded, tested), currencies, save | Pull → slot into lineup → measurable on-court difference |
 | **M3 — Progression loops** | 4 daily minigames, XP/limit break, equipment + set bonuses + farm stages, auto-play rules | 7-day self-playtest: dailies stay <5 min total and feel worth it |
@@ -227,12 +229,13 @@ Time is deliberately front-loaded into M0/M1 per the one rule: **gameplay first.
 3. **Anime 3D art cost** → VRoid pipeline defers spend until fun is proven; 12-char launch cast caps commission budget; one great gym, not five arenas.
 4. **Scope creep** (real-time PvP, beach modes, 2v2) → non-goals written down (§3.5); ghost PvP is the pressure valve.
 5. **Equipment RNG resentment** → deterministic mains + crafting pity (§3.3).
-6. **Compliance** (gacha odds, minors, regional loot-box law) → rates published in-UI from M2 onward; legal review pre-soft-launch.
+6. **Compliance** (gacha odds, minors, regional loot-box law) → rates published in-UI from M2 onward; legal review pre-soft-launch. **2026 note:** PEGI's paid-random-items overhaul defaults gacha titles to PEGI 16 for submissions from June 2026 — EU rating strategy per docs/compliance-localization.md §3.
 7. **Unity licensing shifts** → low risk at indie revenue; deterministic core is engine-portable insurance.
 
 ## 8. Open Questions (non-blocking)
 
-- Title, school/team names, tone (earnest Haikyuu vs. slightly absurd).
-- Art budget & whether launch cast is 12 or trimmed to 8.
-- Story format ambition: static VN portraits (planned) vs Live2D (cost ↑).
+- Title — TBD; clearance checklist ready (compliance doc §6).
+- VO scope — gag-stings-only recommended ($1.5–6k, art-budget §3); awaiting confirmation.
+- Cut-in ambition — static $4.5k → premium $17k → Live2D $30k+ (art-budget §5 lever).
+- Launch cast 12 vs 8 — trimming saves ≈15% art cost, R/SR only (art-budget §5).
 - Target soft-launch region (PH/CA/NZ conventional).

@@ -2,6 +2,7 @@
 
 Source of truth: `PLAN.md`. Vocabulary per wave-2 contract. Spec only — no code files exist yet.
 Conventions: asset ids are lowercase dotted strings (`char.rival_ace_01`), unique per type. All defs are ScriptableObjects in `VG.Data`. Display strings/names here are placeholders — StoryBible owns naming/tone. Reward/cost *amounts* are placeholders — EconomyWorkbook owns values.
+Localization [structural, per `docs/compliance-localization.md` §1]: `LocKey` = `string` alias naming an entry in the Unity Localization string tables. Every user-facing display field below is a `LocKey`; internal `id` fields stay plain strings. Dev-time fallback: a missing table entry renders the key text itself, so EN-only authoring stays frictionless — author the EN copy as the key's value and move on.
 
 Shared enums (verbatim, [structural]):
 
@@ -63,7 +64,7 @@ samples: [40, 42, 44, ..., 198, 200]   # 60 entries, monotonic
 | Field | Type | Notes |
 |---|---|---|
 | `id` | `string` | unique |
-| `displayName` | `string` | StoryBible owns final names |
+| `displayName` | `LocKey` | StoryBible owns final names |
 | `position` | `Position` | |
 | `playstyle` | `Playstyle` | |
 | `rarity` | `Rarity` | |
@@ -99,7 +100,7 @@ voBankRef: addr/vo/rival_ace_01
 | Field | Type | Notes |
 |---|---|---|
 | `id` | `string` | |
-| `displayName` | `string` | |
+| `displayName` | `LocKey` | |
 | `hypeCost` | `int` | 0..100; spends team Hype [structural mechanism, value tunable] |
 | `effects` | `List<SigEffect>` | 1–2 entries, contract primitives only [structural] |
 | `levelScalingRef` | `GrowthCurveDef` | scales effect magnitude by signature level 1–10 |
@@ -179,7 +180,7 @@ iconRef: addr/icons/featherlight_shoes
 | Field | Type | Notes |
 |---|---|---|
 | `id` | `string` | |
-| `displayName` | `string` | |
+| `displayName` | `LocKey` | |
 | `bonus2pc` | `SetBonus` | |
 | `bonus4pc` | `SetBonus` | |
 
@@ -206,10 +207,10 @@ bonus4pc:
 | `poolCharacterIds` | `string[]` | full pull pool incl. featured; MUST NOT contain `char.mc` [structural] |
 | `startUtc` / `endUtc` | `string` (ISO-8601) | schedule window |
 | `costSingle` / `costMulti` | `int` | 160 / 1600 `gems_free`-or-`gems_paid` [structural per contract] |
-| `baseSsrRate` | `float` | 0.006 [tunable] — published in-UI (compliance) |
-| `srRate` | `float` | 0.051 [tunable] |
+| `baseSsrRate` | `float` | 0.008 [tunable] — mirrors economy §3.1 (derivations live there); published in-UI (compliance) |
+| `srRate` | `float` | 0.080 [tunable] — economy §3.1 |
 | `softPityStart` | `int` | 65 [structural] |
-| `softPityRampPerPull` | `float` | +0.06 SSR rate per pull past start [tunable] |
+| `softPityRampPerPull` | `float` | +0.05 SSR rate per pull past start [tunable] — economy §3.1 |
 | `hardPity` | `int` | 80 [structural] |
 | `featuredOdds` | `float` | 0.5 (50/50) with guarantee after loss [structural] |
 
@@ -223,10 +224,10 @@ startUtc: 2026-09-01T04:00:00Z
 endUtc: 2026-09-15T03:59:59Z
 costSingle: 160
 costMulti: 1600
-baseSsrRate: 0.006
-srRate: 0.051
+baseSsrRate: 0.008
+srRate: 0.080
 softPityStart: 65
-softPityRampPerPull: 0.06
+softPityRampPerPull: 0.05
 hardPity: 80
 featuredOdds: 0.5
 ```
@@ -264,7 +265,7 @@ manualGradeCapOnAuto: A
 | `id` | `string` | |
 | `arcId` | `string` | |
 | `orderIndex` | `int` | unique within arc |
-| `sceneRefs` | `AssetReference[]` | VN-lite scene assets (dialogue content = StoryBible territory) |
+| `sceneRefs` | `AssetReference[]` | VN-lite scene assets (dialogue content = StoryBible territory); dialogue lines inside scene assets are `LocKey`-based |
 | `stageIds` | `string[]` | matches in this chapter, played in order |
 | `unlockRequirement` | `string` | prior chapter id or empty (first) |
 | `bannerUnlockId` | `string` | banner opened on completion; empty if none [structural: story feeds gacha] |
@@ -286,6 +287,7 @@ bannerUnlockId: banner.rival_ace_debut
 | Field | Type | Notes |
 |---|---|---|
 | `id` | `string` | |
+| `displayName` | `LocKey` | drill name shown in dailies UI |
 | `drillType` | `DrillType` | `JumpTraining, ServePractice, SpikeDrill, ReceiveDrill` [structural] |
 | `statTrained` | `StatId` | Jump / Serve / Power / Receive respectively |
 | `xpCurveRef` | `GrowthCurveDef` | MC xp per score grade |
@@ -336,7 +338,7 @@ riskTolerance: 0.5      # all [tunable]
 | Field | Type | Notes |
 |---|---|---|
 | `id` | `string` | |
-| `displayName` | `string` | |
+| `displayName` | `LocKey` | |
 | `lineup` | `LineupEntry[6]` | `LineupEntry = { characterId: string, levelOverride: int }` — rotation order 1..6 |
 | `liberoCharacterId` | `string` | position `L`; auto-swap per contract |
 | `benchCharacterIds` | `string[]` | ≤ 4 [tunable] |
@@ -373,7 +375,7 @@ rubberBandProfile: ""
 | Field | Type | Notes |
 |---|---|---|
 | `id` | `string` | `bond.*` — the groups referenced by `CharacterDef.bondLinkIds` (§1.3) |
-| `displayName` | `string` | comedic theme name → story bible |
+| `displayName` | `LocKey` | comedic theme name → story bible |
 | `memberCharacterIds` | `string[]` | ≥ 2; MAY include `char.mc` |
 | `activationThreshold` | `int` | members required among slots+libero, default 2 — resolution rule lives in `LineupState` §2.7 [tunable] |
 | `bonus` | `SetBonus` | reuses §1.7 encoding verbatim; amounts → economy doc §4.6 |
@@ -614,4 +616,4 @@ inputs:                     # player inputs only; AI is derived from seeds
 
 ---
 
-Cross-doc: gameplay formulas/windows → `docs/m0-gameplay-spec.md`; all reward/cost/xp amounts → `docs/economy-progression.md`; names, schools, bond-group fiction → `docs/story-bible.md`.
+Cross-doc: gameplay formulas/windows → `docs/m0-gameplay-spec.md`; all reward/cost/xp amounts → `docs/economy-progression.md`; names, schools, bond-group fiction → `docs/story-bible.md`; `LocKey`/string-table rules → `docs/compliance-localization.md`.
