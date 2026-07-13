@@ -29,4 +29,7 @@ namespace VG.Data
 
     /// <summary>3×3 court zone grid, cols L/C/R × rows F(ront)/M(id)/B(ack) — docs/m0-gameplay-spec.md §4.</summary>
     public enum ZoneId { z_LF, z_CF, z_RF, z_LM, z_CM, z_RM, z_LB, z_CB, z_RB }
+
+    /// <summary>Match formats — first to N, win by 2 [structural]. Values ARE the target scores.</summary>
+    public enum MatchFormat { To11 = 11, To15 = 15, To25 = 25 }
 }
