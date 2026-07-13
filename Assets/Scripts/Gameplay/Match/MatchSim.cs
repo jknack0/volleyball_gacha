@@ -38,7 +38,7 @@ namespace VG.Gameplay.Match
         private readonly RngSet _rng;
         private readonly ResolutionTunables _res = new ResolutionTunables();
         private readonly CascadeTunables _cascade = new CascadeTunables();
-        private readonly PointResolutionTunables _point = new PointResolutionTunables();
+        private readonly PointResolutionTunables _point;
         private readonly BallTunables _ball = new BallTunables();
         private readonly HypeTunables _hypeT = new HypeTunables();
         private readonly AiTunables _ai = new AiTunables();
@@ -49,9 +49,10 @@ namespace VG.Gameplay.Match
         private readonly int[] _setOptionUses = new int[8]; // surprise tracking: 4 options × 2 sides
         private int _decisionsPerSide;                       // coarse action counter for x_surprise
 
-        public MatchSim(MatchConfig config)
+        public MatchSim(MatchConfig config, PointResolutionTunables pointTunables = null)
         {
             _config = config ?? throw new ArgumentNullException(nameof(config));
+            _point = pointTunables ?? new PointResolutionTunables();
             _rng = RngSet.FromMaster(config.MasterSeed);
             _hype = new HypeMeters(_hypeT);
         }
@@ -312,7 +313,10 @@ namespace VG.Gameplay.Match
 
         private TimingGrade SampleGrade(TeamSide side)
         {
-            var grade = GradeSampler.Sample(_ai, Team(side).Tier, AiRng); // §6.2 ⚄
+            var team = Team(side);
+            var grade = team.GradeOverride.HasValue
+                ? GradeSampler.Sample(team.GradeOverride.Value, AiRng) // skill proxy (tooling §2) ⚄
+                : GradeSampler.Sample(_ai, team.Tier, AiRng);          // §6.2 ⚄
             if (grade == TimingGrade.Perfect) _hype.Apply(HypeEvent.PerfectContact, side); // §3.7
             return grade;
         }

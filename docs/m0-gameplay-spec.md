@@ -250,7 +250,7 @@ read-commit (waited for set) → q_b × 0.85; early-commit correct → ×1.15; e
 | 7 | dig attempted: `q_d ≥ 0.25 + 0.55 × A_eff` [tunable] | **dug** — rally continues; dig display grade from margin `q_d − req` mapped via §3.3 table |
 | 8 | otherwise | **kill** — point to attack |
 
-Serve resolution reuses the same pipeline with `B = 0` and receive as the "dig": ace = step 8, service error = steps 2–3.
+Serve resolution reuses the same pipeline with `B = 0` and receive as the "dig": ace = step 8, service error = steps 2–3. The step-7 requirement is scaled by `ServeReceiveRequirementFactor = 0.80` for serves only [tunable — swept via SimRunner 2026-07-13: 1.0 gave 43% two-contact rallies; 0.80 gives ~16% with median 4 and kills still the top outcome; real-volleyball ace+error ≈ 10–15%].
 
 ### 3.7 Hype accrual [tunable table]
 

@@ -39,6 +39,13 @@ namespace VG.Gameplay.Resolution
         public float DigBase = 0.25f;
         public float DigPerAEff = 0.55f;
 
+        /// <summary>
+        /// Serve receives are the practiced skill: the step-7 requirement is scaled by this
+        /// factor for serve resolution only (§3.6 tail) — the ace-rate tuning knob surfaced by
+        /// the first SimRunner batches (43% two-contact rallies at 1.0) [tunable].
+        /// </summary>
+        public float ServeReceiveRequirementFactor = 0.80f;
+
         /// <summary>§4.1 risk(z): corner zones 1.0, mid-edge 0.6, center 0.2 [tunable].</summary>
         public float RiskCorner = 1.0f;
         public float RiskMidEdge = 0.6f;
@@ -172,7 +179,8 @@ namespace VG.Gameplay.Resolution
             TimingGrade spikeTiming,
             ZoneId aimZone,
             in BlockState block,
-            float digQuality)
+            float digQuality,
+            float requirementFactor = 1f)
         {
             // Step 1 — timing Miss: free ball over, rally continues.
             if (spikeTiming == TimingGrade.Miss)
@@ -210,7 +218,7 @@ namespace VG.Gameplay.Resolution
             // Step 7 — dig.
             if (digQuality >= 0f)
             {
-                float required = t.DigBase + t.DigPerAEff * aEff;
+                float required = (t.DigBase + t.DigPerAEff * aEff) * requirementFactor;
                 if (digQuality >= required)
                 {
                     var grade = QualityMath.ReceiveGradeOf(resolution, digQuality - required);
@@ -236,7 +244,8 @@ namespace VG.Gameplay.Resolution
             float receiveQuality)
         {
             TimingGrade timing = serveTiming == TimingGrade.Miss ? TimingGrade.Good : serveTiming;
-            return ResolveAttack(t, resolution, serveQuality, timing, aimZone, BlockState.None, receiveQuality);
+            return ResolveAttack(t, resolution, serveQuality, timing, aimZone, BlockState.None, receiveQuality,
+                t.ServeReceiveRequirementFactor);
         }
     }
 }

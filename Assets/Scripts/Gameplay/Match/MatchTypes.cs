@@ -1,3 +1,4 @@
+using VG.Gameplay.Ai;
 using System;
 using System.Collections.Generic;
 using VG.Data;
@@ -24,16 +25,20 @@ namespace VG.Gameplay.Match
         public readonly PlayerSpec[] Players;
         public readonly DifficultyTier Tier;
 
-        public TeamSpec(PlayerSpec[] players, DifficultyTier tier)
+        /// <summary>When set, grade sampling uses this distribution instead of the tier's §6.2 row — the skill-proxy hook (tooling-pipeline §2).</summary>
+        public readonly GradeDistribution? GradeOverride;
+
+        public TeamSpec(PlayerSpec[] players, DifficultyTier tier, GradeDistribution? gradeOverride = null)
         {
             if (players == null || players.Length != 6)
                 throw new ArgumentException("A team is exactly 6 players (M0: no libero/bench — meta layer, M2).", nameof(players));
             Players = players;
             Tier = tier;
+            GradeOverride = gradeOverride;
         }
 
         /// <summary>A uniform team where every player has every stat at <paramref name="raw"/> (0–200).</summary>
-        public static TeamSpec Uniform(string prefix, int raw, DifficultyTier tier)
+        public static TeamSpec Uniform(string prefix, int raw, DifficultyTier tier, GradeDistribution? gradeOverride = null)
         {
             var players = new PlayerSpec[6];
             for (int i = 0; i < 6; i++)
@@ -43,7 +48,7 @@ namespace VG.Gameplay.Match
                     Power = raw, Jump = raw, Technique = raw, Serve = raw, Receive = raw, Speed = raw,
                 });
             }
-            return new TeamSpec(players, tier);
+            return new TeamSpec(players, tier, gradeOverride);
         }
     }
 

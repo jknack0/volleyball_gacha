@@ -17,8 +17,14 @@ namespace VG.Gameplay.Ai
         /// stays total even if a mutated distribution sums below 1.
         /// </summary>
         public static TimingGrade Sample(AiTunables tunables, DifficultyTier tier, IRng rng)
+            => Sample(tunables.GradesFor(tier), rng);
+
+        /// <summary>
+        /// Distribution-direct overload — used by player skill proxies (tooling-pipeline §2:
+        /// headless has no human, so a proxy IS a grade distribution). Same one-draw contract.
+        /// </summary>
+        public static TimingGrade Sample(in GradeDistribution d, IRng rng)
         {
-            GradeDistribution d = tunables.GradesFor(tier);
             float u = rng.NextFloat01();
 
             float c = d.Perfect;

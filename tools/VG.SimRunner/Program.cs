@@ -1,15 +1,21 @@
 using System;
 using System.Collections.Generic;
+using System.Text;
 using VG.Data;
+using VG.Gameplay.Ai;
 using VG.Gameplay.Match;
+using VG.Gameplay.Resolution;
 
 namespace VG.SimRunner
 {
     /// <summary>
-    /// VB-11 headless runner. Modes:
-    ///   batch  --home-tier X --away-tier Y [--matches N] [--seed0 S] [--home-raw R] [--away-raw R] [--format 11|15|25]
-    ///   mirror [--matches N] [--tier X]         — identical teams; §tooling-2c bias suite (CI must contain 0.50)
-    ///   transcript [--seed S] [--tier X]        — one match, rally-by-rally demo output
+    /// VB-11 headless runner (docs/tooling-pipeline.md §2). Modes:
+    ///   batch      --home-tier X --away-tier Y [--matches N] [--seed0 S] [--home-raw R] [--away-raw R] [--format 11|15|25] [--json path]
+    ///   mirror     [--matches N] [--tier X] [--json path]        — suite (c): CI must contain 0.50, |bias| ≤ 3pp
+    ///   transcript [--seed S] [--tier X]                          — one match, rally-by-rally demo
+    ///   sweep      [--matches N]                                  — ServeReceiveRequirementFactor grid vs ace rate / gate band
+    ///   calibrate  [--matches N] [--home-raw R]                   — suite (a): Median proxy vs Easy/Normal/Hard, bands 80–92 / 55–72 / 32–48%
+    ///   economy    [--matches N]                                  — suite (b) slice: Skilled proxy at PI−0.08 must keep ≥30% vs Normal
     /// </summary>
     public static class Program
     {
@@ -22,6 +28,9 @@ namespace VG.SimRunner
             {
                 case "mirror": return Mirror(opt);
                 case "transcript": return Transcript(opt);
+                case "sweep": return Sweep(opt);
+                case "calibrate": return Calibrate(opt);
+                case "economy": return Economy(opt);
                 default: return Batch(opt);
             }
         }
@@ -35,6 +44,7 @@ namespace VG.SimRunner
             public int HomeRaw = 100;
             public int AwayRaw = 100;
             public MatchFormat Format = MatchFormat.To11;
+            public string JsonPath;
         }
 
         private static Options ParseOptions(string[] args)
@@ -53,78 +63,176 @@ namespace VG.SimRunner
                     case "--home-raw": o.HomeRaw = int.Parse(v); break;
                     case "--away-raw": o.AwayRaw = int.Parse(v); break;
                     case "--format": o.Format = (MatchFormat)int.Parse(v); break;
+                    case "--json": o.JsonPath = v; break;
                 }
             }
             return o;
         }
 
-        private static MatchResult Play(Options o, ulong seed)
+        private static MatchResult Play(Options o, ulong seed,
+            PointResolutionTunables point = null,
+            GradeDistribution? homeProxy = null, GradeDistribution? awayProxy = null)
             => new MatchSim(new MatchConfig(
-                TeamSpec.Uniform("H", o.HomeRaw, o.HomeTier),
-                TeamSpec.Uniform("A", o.AwayRaw, o.AwayTier),
-                o.Format, seed)).Run();
+                TeamSpec.Uniform("H", o.HomeRaw, o.HomeTier, homeProxy),
+                TeamSpec.Uniform("A", o.AwayRaw, o.AwayTier, awayProxy),
+                o.Format, seed), point).Run();
+
+        // ---- aggregation --------------------------------------------------------------------
+
+        private sealed class Agg
+        {
+            public int Matches, HomeWins, Rallies, TwoContact;
+            public long Ticks;
+            public readonly List<int> Lengths = new List<int>();
+            public readonly Dictionary<RallyOutcome, int> Outcomes = new Dictionary<RallyOutcome, int>();
+
+            public void Add(MatchResult r)
+            {
+                Matches++;
+                if (r.HomeWon) HomeWins++;
+                foreach (var rally in r.Rallies)
+                {
+                    Rallies++;
+                    Ticks += rally.DurationTicks;
+                    Lengths.Add(rally.Contacts);
+                    if (rally.Contacts <= 2) TwoContact++;
+                    Outcomes.TryGetValue(rally.Outcome, out int c);
+                    Outcomes[rally.Outcome] = c + 1;
+                }
+            }
+
+            public double WinRate => Matches == 0 ? 0 : (double)HomeWins / Matches;
+            public double TwoContactShare => Rallies == 0 ? 0 : (double)TwoContact / Rallies;
+            public double MedianLength { get { Lengths.Sort(); return Median(Lengths); } }
+        }
+
+        private static Agg RunAgg(Options o, PointResolutionTunables point = null,
+            GradeDistribution? homeProxy = null, GradeDistribution? awayProxy = null)
+        {
+            var agg = new Agg();
+            for (int i = 0; i < o.Matches; i++)
+                agg.Add(Play(o, o.Seed0 + (ulong)i, point, homeProxy, awayProxy));
+            return agg;
+        }
 
         // ---- batch --------------------------------------------------------------------------
 
         private static int Batch(Options o)
         {
-            int homeWins = 0, rallies = 0;
-            long ticks = 0;
-            var lengths = new List<int>(o.Matches * 40);
-            var outcomes = new Dictionary<RallyOutcome, int>();
-
             var sw = System.Diagnostics.Stopwatch.StartNew();
-            for (int i = 0; i < o.Matches; i++)
-            {
-                var r = Play(o, o.Seed0 + (ulong)i);
-                if (r.HomeWon) homeWins++;
-                foreach (var rally in r.Rallies)
-                {
-                    rallies++;
-                    ticks += rally.DurationTicks;
-                    lengths.Add(rally.Contacts);
-                    outcomes.TryGetValue(rally.Outcome, out int c);
-                    outcomes[rally.Outcome] = c + 1;
-                }
-            }
+            var agg = RunAgg(o);
             sw.Stop();
 
-            lengths.Sort();
-            double median = Median(lengths);
-            var (lo, hi) = WilsonCi(homeWins, o.Matches);
+            double median = agg.MedianLength;
+            var (lo, hi) = WilsonCi(agg.HomeWins, agg.Matches);
 
             Console.WriteLine($"# batch  {o.HomeTier}(raw {o.HomeRaw}) vs {o.AwayTier}(raw {o.AwayRaw})  {o.Matches} matches ({o.Format})  [{sw.ElapsedMilliseconds} ms]");
-            Console.WriteLine($"home win rate: {100.0 * homeWins / o.Matches:F1}%   Wilson95 [{100 * lo:F1}%, {100 * hi:F1}%]");
-            Console.WriteLine($"rallies: {rallies}   mean contacts {Mean(lengths):F2}   median {median:F1}   feel-gate band [4, 9] {(median >= 4 && median <= 9 ? "PASS" : "MISS")}");
-            Console.WriteLine($"mean rally sim-time: {ticks / (double)rallies / 60.0:F1} s");
+            Console.WriteLine($"home win rate: {100 * agg.WinRate:F1}%   Wilson95 [{100 * lo:F1}%, {100 * hi:F1}%]");
+            Console.WriteLine($"rallies: {agg.Rallies}   mean contacts {Mean(agg.Lengths):F2}   median {median:F1}   2-contact {100 * agg.TwoContactShare:F1}%   feel-gate band [4, 9] {(median >= 4 && median <= 9 ? "PASS" : "MISS")}");
+            Console.WriteLine($"mean rally sim-time: {agg.Ticks / (double)agg.Rallies / 60.0:F1} s");
             Console.WriteLine("rally-length histogram:");
-            Histogram(lengths);
+            Histogram(agg.Lengths);
             Console.WriteLine("outcomes:");
-            foreach (var kv in outcomes)
-                Console.WriteLine($"  {kv.Key,-8} {kv.Value,6}  {100.0 * kv.Value / rallies:F1}%");
+            foreach (var kv in agg.Outcomes)
+                Console.WriteLine($"  {kv.Key,-8} {kv.Value,6}  {100.0 * kv.Value / agg.Rallies:F1}%");
+
+            WriteJson(o.JsonPath, agg, o, "batch");
             return 0;
         }
 
-        // ---- mirror (tooling-pipeline §2 suite c) ------------------------------------------------
+        // ---- mirror (suite c) ----------------------------------------------------------------
 
         private static int Mirror(Options o)
         {
             o.AwayTier = o.HomeTier;
             o.AwayRaw = o.HomeRaw;
-            int homeWins = 0;
-            for (int i = 0; i < o.Matches; i++)
-                if (Play(o, o.Seed0 + (ulong)i).HomeWon) homeWins++;
+            var agg = RunAgg(o);
 
-            double rate = (double)homeWins / o.Matches;
-            var (lo, hi) = WilsonCi(homeWins, o.Matches);
+            var (lo, hi) = WilsonCi(agg.HomeWins, agg.Matches);
             bool ciContainsHalf = lo <= 0.5 && 0.5 <= hi;
-            bool biasOk = Math.Abs(rate - 0.5) <= 0.03;
+            bool biasOk = Math.Abs(agg.WinRate - 0.5) <= 0.03;
 
             Console.WriteLine($"# mirror  {o.HomeTier} vs {o.HomeTier}, raw {o.HomeRaw}, {o.Matches} matches");
-            Console.WriteLine($"home win rate: {100 * rate:F2}%   Wilson95 [{100 * lo:F2}%, {100 * hi:F2}%]");
+            Console.WriteLine($"home win rate: {100 * agg.WinRate:F2}%   Wilson95 [{100 * lo:F2}%, {100 * hi:F2}%]");
             Console.WriteLine($"CI contains 50%: {(ciContainsHalf ? "yes" : "NO")}   |bias| <= 3pp: {(biasOk ? "yes" : "NO")}");
             Console.WriteLine(ciContainsHalf && biasOk ? "MIRROR SUITE: PASS" : "MIRROR SUITE: FAIL — structural side/serve bias");
+
+            WriteJson(o.JsonPath, agg, o, "mirror");
             return ciContainsHalf && biasOk ? 0 : 1;
+        }
+
+        // ---- sweep: the ace-rate knob -----------------------------------------------------------
+
+        private static int Sweep(Options o)
+        {
+            Console.WriteLine($"# sweep ServeReceiveRequirementFactor  {o.HomeTier} mirror, {o.Matches} matches/point");
+            Console.WriteLine("factor | 2-contact | median | mean | kills | tools | nets | blocks");
+            for (float f = 1.00f; f >= 0.549f; f -= 0.05f)
+            {
+                var point = new PointResolutionTunables { ServeReceiveRequirementFactor = f };
+                var agg = RunAgg(o, point);
+                agg.Outcomes.TryGetValue(RallyOutcome.Kill, out int k);
+                agg.Outcomes.TryGetValue(RallyOutcome.Tooled, out int t);
+                agg.Outcomes.TryGetValue(RallyOutcome.Net, out int n);
+                agg.Outcomes.TryGetValue(RallyOutcome.Blocked, out int b);
+                Console.WriteLine(
+                    $"{f,6:F2} | {100 * agg.TwoContactShare,8:F1}% | {agg.MedianLength,6:F1} | {Mean(agg.Lengths),4:F2} | {Pct(k, agg.Rallies),5} | {Pct(t, agg.Rallies),5} | {Pct(n, agg.Rallies),5} | {Pct(b, agg.Rallies),6}");
+            }
+            return 0;
+        }
+
+        // ---- calibrate (suite a) -------------------------------------------------------------------
+
+        private static int Calibrate(Options o)
+        {
+            // Median proxy executes; decisions run at Normal vocabulary/weights [tunable pairing].
+            Console.WriteLine($"# calibrate  Median proxy (Normal decisions, raw {o.HomeRaw}) vs each tier, {o.Matches} matches each");
+            (DifficultyTier tier, double lo, double hi)[] bands =
+            {
+                (DifficultyTier.Easy, 0.80, 0.92),
+                (DifficultyTier.Normal, 0.55, 0.72),
+                (DifficultyTier.Hard, 0.32, 0.48),
+            };
+            bool allPass = true;
+            double prev = double.MaxValue;
+            foreach (var (tier, blo, bhi) in bands)
+            {
+                var local = new Options
+                {
+                    HomeTier = DifficultyTier.Normal, AwayTier = tier,
+                    Matches = o.Matches, Seed0 = o.Seed0,
+                    HomeRaw = o.HomeRaw, AwayRaw = o.AwayRaw, Format = o.Format,
+                };
+                var agg = RunAgg(local, homeProxy: SkillProxy.Median);
+                var (lo, hi) = WilsonCi(agg.HomeWins, agg.Matches);
+                bool inBand = agg.WinRate >= blo && agg.WinRate <= bhi;
+                bool ordered = agg.WinRate < prev;
+                prev = agg.WinRate;
+                allPass &= inBand && ordered;
+                Console.WriteLine(
+                    $"vs {tier,-6}  win {100 * agg.WinRate,5:F1}%  CI [{100 * lo:F1}, {100 * hi:F1}]  band [{100 * blo:F0}, {100 * bhi:F0}]  {(inBand ? "PASS" : "MISS")}{(ordered ? "" : "  ORDERING-VIOLATION")}");
+            }
+            Console.WriteLine(allPass ? "CALIBRATION: PASS" : "CALIBRATION: MISS — tuning input (§6.2 distributions / proxy defs)");
+            return allPass ? 0 : 1;
+        }
+
+        // ---- economy §8.2 slice (suite b) ---------------------------------------------------------------
+
+        private static int Economy(Options o)
+        {
+            // Skilled proxy at PI − 0.08 (raw −16) vs Normal AI at listed PI: must keep ≥ 30% (no hard wall).
+            var local = new Options
+            {
+                HomeTier = DifficultyTier.Normal, AwayTier = DifficultyTier.Normal,
+                Matches = o.Matches, Seed0 = o.Seed0,
+                HomeRaw = o.HomeRaw - 16, AwayRaw = o.AwayRaw, Format = o.Format,
+            };
+            var agg = RunAgg(local, homeProxy: SkillProxy.Skilled);
+            var (lo, hi) = WilsonCi(agg.HomeWins, agg.Matches);
+            bool pass = agg.WinRate >= 0.30;
+            Console.WriteLine($"# economy  Skilled proxy raw {local.HomeRaw} (PI −0.08) vs Normal AI raw {o.AwayRaw}, {o.Matches} matches");
+            Console.WriteLine($"win rate: {100 * agg.WinRate:F1}%  CI [{100 * lo:F1}, {100 * hi:F1}]  requirement ≥ 30%: {(pass ? "PASS" : "FAIL — hard wall (economy §8.2)")}");
+            return pass ? 0 : 1;
         }
 
         // ---- transcript (the terminal demo) ---------------------------------------------------------
@@ -160,7 +268,31 @@ namespace VG.SimRunner
             }
         }
 
-        // ---- stats helpers -----------------------------------------------------------------------------
+        // ---- output helpers -----------------------------------------------------------------------------
+
+        private static void WriteJson(string path, Agg agg, Options o, string mode)
+        {
+            if (string.IsNullOrEmpty(path)) return;
+            var sb = new StringBuilder(1024);
+            sb.Append('{');
+            sb.Append($"\"mode\":\"{mode}\",\"homeTier\":\"{o.HomeTier}\",\"awayTier\":\"{o.AwayTier}\",");
+            sb.Append($"\"homeRaw\":{o.HomeRaw},\"awayRaw\":{o.AwayRaw},\"format\":{(int)o.Format},\"matches\":{agg.Matches},\"seed0\":{o.Seed0},");
+            sb.Append($"\"homeWins\":{agg.HomeWins},\"winRate\":{agg.WinRate:F4},\"rallies\":{agg.Rallies},");
+            sb.Append($"\"medianContacts\":{agg.MedianLength:F1},\"meanContacts\":{Mean(agg.Lengths):F3},\"twoContactShare\":{agg.TwoContactShare:F4},");
+            sb.Append("\"outcomes\":{");
+            bool first = true;
+            foreach (var kv in agg.Outcomes)
+            {
+                if (!first) sb.Append(',');
+                first = false;
+                sb.Append($"\"{kv.Key}\":{kv.Value}");
+            }
+            sb.Append("}}");
+            System.IO.File.WriteAllText(path, sb.ToString());
+            Console.WriteLine($"json report → {path}");
+        }
+
+        private static string Pct(int n, int total) => total == 0 ? "-" : $"{100.0 * n / total:F1}%";
 
         private static double Mean(List<int> xs)
         {

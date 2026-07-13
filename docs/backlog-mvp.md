@@ -18,7 +18,7 @@ Priorities: `P0` = critical path now · `P1` = M0 scope · `P2` = post-gate.
 | VB-8 | ✅ §3.6 point-resolution pipeline | `15f0861` |
 | VB-9 | ✅ Hype/Ignition + primitives (a)–(f) | `cf65858` |
 | VB-10 | ✅ AI utility/sampling/vocabulary | `cf65858` |
-| VB-11 | ◐ runner (batch/mirror/transcript) live, mirror suite PASS; open: JSON report output, player skill-proxy profiles | `2caac05` |
+| VB-11 | ✅ runner (batch/mirror/transcript/sweep/calibrate/economy), JSON reports, skill proxies — all three standing suites operational | `2caac05`+ |
 | VB-12..20 | ⏳ blocked on Unity 6 editor install (user-side) | — |
 | VB-21..23 | ⏳ gate-blocked by design | — |
 
@@ -26,9 +26,13 @@ Suite: **168 EditMode tests green** — `~/.dotnet/dotnet test tools/VG.SimTests
 
 **Unticketed work landed:** `MatchSim` composition layer (`Assets/Scripts/Gameplay/Match/`) — full deterministic AI-vs-AI headless matches; implicit prerequisite of VB-11, consumed by VB-12/VB-18. Demo: `~/.dotnet/dotnet run --project tools/VG.SimRunner -c Release -- transcript --tier Normal --seed 42`.
 
-**First balance data (`2caac05`):** mirror 50.05%/2000 PASS (no side/serve bias); Normal-vs-Normal median rally 4.0 contacts (band [4,9] passes) but **43% two-contact rallies — ace-heavy**; primary tuning target `PointResolutionTunables.DigBase/DigPerAEff`. Easy 0/300 vs Hard — tier wall, M1 story-pacing lever.
+**Balance findings (updated after the serve-receive sweep):**
+- Mirror suite PASS at tuned defaults (51.45%/2000, CI contains 50%).
+- `ServeReceiveRequirementFactor` swept 1.00→0.55 and set to **0.80**: two-contact rallies 43.1% → 16.4%, median 4.0, mean 5.58. Spec §3.6 updated. Residual shape watch: Tooled ~32% / Net ~27% share at 0.80 — knobs are `ToolMargin`/`NetFloorQuality`/edge-out thresholds; tune with human feel in M0 W7–8, not blind.
+- **Tier calibration MISS (the suite's first real verdict):** Median proxy beats Easy 98% (band 80–92), loses to Normal at 27.5% (band 55–72), 0% vs Hard (band 32–48). §6.2 tier distributions are spread too wide — current Normal executes above a median player. Direction: compress tiers downward (Normal ≈ halfway to current Easy); joint-tune with proxy defs when human data exists.
+- **Economy §8.2 suite PASS:** Skilled proxy at PI−0.08 (raw 84) wins 61.0% vs Normal at raw 100 (floor 30%) — "stats assist, skill decides" holds numerically.
 
-**Design decisions promoted from code to spec:** Ignition latches (m0-gameplay-spec §3.7 note); AI v0 bypasses §3.5 spike-window ctx (m0-gameplay-spec §6.2 note).
+**Design decisions promoted from code to spec:** Ignition latches (m0-gameplay-spec §3.7 note); AI v0 bypasses §3.5 spike-window ctx (§6.2 note); serve-receive factor 0.80 (§3.6 note).
 
 
 ## Dependency graph
