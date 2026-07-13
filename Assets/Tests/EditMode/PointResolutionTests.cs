@@ -188,18 +188,15 @@ namespace VG.Tests
         [Test]
         public void RiskTable_MatchesSpec()
         {
-            Assert.Multiple(() =>
-            {
-                Assert.That(_t.RiskOf(ZoneId.z_LF), Is.EqualTo(1.0f));
-                Assert.That(_t.RiskOf(ZoneId.z_RF), Is.EqualTo(1.0f));
-                Assert.That(_t.RiskOf(ZoneId.z_LB), Is.EqualTo(1.0f));
-                Assert.That(_t.RiskOf(ZoneId.z_RB), Is.EqualTo(1.0f));
-                Assert.That(_t.RiskOf(ZoneId.z_CM), Is.EqualTo(0.2f));
-                Assert.That(_t.RiskOf(ZoneId.z_CF), Is.EqualTo(0.6f));
-                Assert.That(_t.RiskOf(ZoneId.z_LM), Is.EqualTo(0.6f));
-                Assert.That(_t.RiskOf(ZoneId.z_RM), Is.EqualTo(0.6f));
-                Assert.That(_t.RiskOf(ZoneId.z_CB), Is.EqualTo(0.6f));
-            });
+            Assert.That(_t.RiskOf(ZoneId.z_LF), Is.EqualTo(1.0f));
+            Assert.That(_t.RiskOf(ZoneId.z_RF), Is.EqualTo(1.0f));
+            Assert.That(_t.RiskOf(ZoneId.z_LB), Is.EqualTo(1.0f));
+            Assert.That(_t.RiskOf(ZoneId.z_RB), Is.EqualTo(1.0f));
+            Assert.That(_t.RiskOf(ZoneId.z_CM), Is.EqualTo(0.2f));
+            Assert.That(_t.RiskOf(ZoneId.z_CF), Is.EqualTo(0.6f));
+            Assert.That(_t.RiskOf(ZoneId.z_LM), Is.EqualTo(0.6f));
+            Assert.That(_t.RiskOf(ZoneId.z_RM), Is.EqualTo(0.6f));
+            Assert.That(_t.RiskOf(ZoneId.z_CB), Is.EqualTo(0.6f));
         }
 
         [Test]
@@ -209,13 +206,10 @@ namespace VG.Tests
             var block = new BlockState(BlockCommit.Read, 1, 0.55f);
             var a = Resolve(0.73f, TimingGrade.Great, ZoneId.z_CB, block, dig: 0.61f);
             var b = Resolve(0.73f, TimingGrade.Great, ZoneId.z_CB, block, dig: 0.61f);
-            Assert.Multiple(() =>
-            {
-                Assert.That(b.Outcome, Is.EqualTo(a.Outcome));
-                Assert.That(b.EffectiveAttack, Is.EqualTo(a.EffectiveAttack));
-                Assert.That(b.BlockTouched, Is.EqualTo(a.BlockTouched));
-                Assert.That(b.DigDisplayGrade, Is.EqualTo(a.DigDisplayGrade));
-            });
+            Assert.That(b.Outcome, Is.EqualTo(a.Outcome));
+            Assert.That(b.EffectiveAttack, Is.EqualTo(a.EffectiveAttack));
+            Assert.That(b.BlockTouched, Is.EqualTo(a.BlockTouched));
+            Assert.That(b.DigDisplayGrade, Is.EqualTo(a.DigDisplayGrade));
         }
     }
 }

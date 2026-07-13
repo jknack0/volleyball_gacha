@@ -41,15 +41,12 @@ namespace VG.Tests
             DifficultyTier tier, float matchup, float score, float hype, float rally, float lit, float surprise)
         {
             UtilityWeights w = new AiTunables().WeightsFor(tier);
-            Assert.Multiple(() =>
-            {
-                Assert.That(w.Matchup, Is.EqualTo(matchup), "w_matchup");
-                Assert.That(w.Score, Is.EqualTo(score), "w_score");
-                Assert.That(w.Hype, Is.EqualTo(hype), "w_hype");
-                Assert.That(w.Rally, Is.EqualTo(rally), "w_rally");
-                Assert.That(w.Lit, Is.EqualTo(lit), "w_lit");
-                Assert.That(w.Surprise, Is.EqualTo(surprise), "w_surprise");
-            });
+            Assert.That(w.Matchup, Is.EqualTo(matchup), "w_matchup");
+            Assert.That(w.Score, Is.EqualTo(score), "w_score");
+            Assert.That(w.Hype, Is.EqualTo(hype), "w_hype");
+            Assert.That(w.Rally, Is.EqualTo(rally), "w_rally");
+            Assert.That(w.Lit, Is.EqualTo(lit), "w_lit");
+            Assert.That(w.Surprise, Is.EqualTo(surprise), "w_surprise");
         }
 
         // Bug caught: any §6.2 probability cell drifting from spec (AI execution retuned unnoticed).
@@ -60,15 +57,12 @@ namespace VG.Tests
             DifficultyTier tier, float perfect, float great, float good, float miss)
         {
             GradeDistribution d = new AiTunables().GradesFor(tier);
-            Assert.Multiple(() =>
-            {
-                Assert.That(d.Perfect, Is.EqualTo(perfect), "P(Perfect)");
-                Assert.That(d.Great, Is.EqualTo(great), "P(Great)");
-                Assert.That(d.Good, Is.EqualTo(good), "P(Good)");
-                Assert.That(d.Miss, Is.EqualTo(miss), "P(Miss)");
-                Assert.That(d.Perfect + d.Great + d.Good + d.Miss, Is.EqualTo(1f).Within(1e-6f),
-                    "distribution must be total");
-            });
+            Assert.That(d.Perfect, Is.EqualTo(perfect), "P(Perfect)");
+            Assert.That(d.Great, Is.EqualTo(great), "P(Great)");
+            Assert.That(d.Good, Is.EqualTo(good), "P(Good)");
+            Assert.That(d.Miss, Is.EqualTo(miss), "P(Miss)");
+            Assert.That(d.Perfect + d.Great + d.Good + d.Miss, Is.EqualTo(1f).Within(1e-6f),
+                "distribution must be total");
         }
 
         // ---- (b) §6.1 scorer + argmax rng contract -------------------------------------
@@ -122,11 +116,8 @@ namespace VG.Tests
             var counting = new CountingRng(Xoshiro128StarStar.FromSeed(Seed));
             int pick = UtilityScorer.PickArgmax(new AiTunables(), DifficultyTier.Normal, candidates, counting);
 
-            Assert.Multiple(() =>
-            {
-                Assert.That(counting.Draws, Is.EqualTo(1), "exactly one draw per tie-break");
-                Assert.That(pick, Is.EqualTo(1).Or.EqualTo(2).Or.EqualTo(4), "pick must be a tied candidate");
-            });
+            Assert.That(counting.Draws, Is.EqualTo(1), "exactly one draw per tie-break");
+            Assert.That(pick, Is.EqualTo(1).Or.EqualTo(2).Or.EqualTo(4), "pick must be a tied candidate");
         }
 
         [Test]
@@ -177,13 +168,10 @@ namespace VG.Tests
                 counts[(int)GradeSampler.Sample(tunables, tier, rng)]++;
 
             GradeDistribution d = tunables.GradesFor(tier);
-            Assert.Multiple(() =>
-            {
-                Assert.That(counts[(int)TimingGrade.Perfect] / (float)N, Is.EqualTo(d.Perfect).Within(0.02f), "P(Perfect)");
-                Assert.That(counts[(int)TimingGrade.Great] / (float)N, Is.EqualTo(d.Great).Within(0.02f), "P(Great)");
-                Assert.That(counts[(int)TimingGrade.Good] / (float)N, Is.EqualTo(d.Good).Within(0.02f), "P(Good)");
-                Assert.That(counts[(int)TimingGrade.Miss] / (float)N, Is.EqualTo(d.Miss).Within(0.02f), "P(Miss)");
-            });
+            Assert.That(counts[(int)TimingGrade.Perfect] / (float)N, Is.EqualTo(d.Perfect).Within(0.02f), "P(Perfect)");
+            Assert.That(counts[(int)TimingGrade.Great] / (float)N, Is.EqualTo(d.Great).Within(0.02f), "P(Great)");
+            Assert.That(counts[(int)TimingGrade.Good] / (float)N, Is.EqualTo(d.Good).Within(0.02f), "P(Good)");
+            Assert.That(counts[(int)TimingGrade.Miss] / (float)N, Is.EqualTo(d.Miss).Within(0.02f), "P(Miss)");
         }
 
         [Test]
@@ -247,46 +235,40 @@ namespace VG.Tests
             // Contract: BOTH the §6.3 vocabulary AND the §3.4 lit matrix must allow the option.
             // Bug caught: either gate dropped — Normal AI quicking off a B receive (vocab-only),
             // or Easy AI quicking off an S receive (Cascade-only).
-            Assert.Multiple(() =>
-            {
-                // Normal + B receive: vocabulary allows Quick, but B does not light it.
-                Assert.That(TacticVocabulary.MayChooseSetOption(
-                    DifficultyTier.Normal, ReceiveGrade.B, SetOption.QuickMiddle), Is.False,
-                    "B receive must veto Quick despite Normal vocabulary");
+            // Normal + B receive: vocabulary allows Quick, but B does not light it.
+            Assert.That(TacticVocabulary.MayChooseSetOption(
+                DifficultyTier.Normal, ReceiveGrade.B, SetOption.QuickMiddle), Is.False,
+                "B receive must veto Quick despite Normal vocabulary");
 
-                // Easy + S receive: everything is lit, but Easy's vocabulary is high-outside only.
-                Assert.That(TacticVocabulary.MayChooseSetOption(
-                    DifficultyTier.Easy, ReceiveGrade.S, SetOption.QuickMiddle), Is.False,
-                    "Easy vocabulary must veto Quick despite S receive");
+            // Easy + S receive: everything is lit, but Easy's vocabulary is high-outside only.
+            Assert.That(TacticVocabulary.MayChooseSetOption(
+                DifficultyTier.Easy, ReceiveGrade.S, SetOption.QuickMiddle), Is.False,
+                "Easy vocabulary must veto Quick despite S receive");
 
-                // Hard + C receive: full vocabulary, but only high-outside is lit.
-                Assert.That(TacticVocabulary.MayChooseSetOption(
-                    DifficultyTier.Hard, ReceiveGrade.C, SetOption.BackRowPipe), Is.False,
-                    "C receive must veto pipe despite Hard vocabulary");
+            // Hard + C receive: full vocabulary, but only high-outside is lit.
+            Assert.That(TacticVocabulary.MayChooseSetOption(
+                DifficultyTier.Hard, ReceiveGrade.C, SetOption.BackRowPipe), Is.False,
+                "C receive must veto pipe despite Hard vocabulary");
 
-                // Both gates open.
-                Assert.That(TacticVocabulary.MayChooseSetOption(
-                    DifficultyTier.Normal, ReceiveGrade.A, SetOption.QuickMiddle), Is.True,
-                    "A receive + Normal vocabulary must allow Quick");
-                Assert.That(TacticVocabulary.MayChooseSetOption(
-                    DifficultyTier.Easy, ReceiveGrade.Shank, SetOption.HighOutside), Is.True,
-                    "the forced high-outside stays choosable at every tier");
-            });
+            // Both gates open.
+            Assert.That(TacticVocabulary.MayChooseSetOption(
+                DifficultyTier.Normal, ReceiveGrade.A, SetOption.QuickMiddle), Is.True,
+                "A receive + Normal vocabulary must allow Quick");
+            Assert.That(TacticVocabulary.MayChooseSetOption(
+                DifficultyTier.Easy, ReceiveGrade.Shank, SetOption.HighOutside), Is.True,
+                "the forced high-outside stays choosable at every tier");
         }
 
         [Test]
         public void BlockBehavior_MatchesSpecPerTier()
         {
             // §6.3 block column. Bug caught: tiers swapped (Easy soft-committing adjacent columns).
-            Assert.Multiple(() =>
-            {
-                Assert.That(TacticVocabulary.BlockBehaviorFor(DifficultyTier.Easy),
-                    Is.EqualTo(BlockBehavior.ReadOnlyCenter));
-                Assert.That(TacticVocabulary.BlockBehaviorFor(DifficultyTier.Normal),
-                    Is.EqualTo(BlockBehavior.ReadWithOccasionalCommit));
-                Assert.That(TacticVocabulary.BlockBehaviorFor(DifficultyTier.Hard),
-                    Is.EqualTo(BlockBehavior.FullMixAdjacentSoftCommit));
-            });
+            Assert.That(TacticVocabulary.BlockBehaviorFor(DifficultyTier.Easy),
+                Is.EqualTo(BlockBehavior.ReadOnlyCenter));
+            Assert.That(TacticVocabulary.BlockBehaviorFor(DifficultyTier.Normal),
+                Is.EqualTo(BlockBehavior.ReadWithOccasionalCommit));
+            Assert.That(TacticVocabulary.BlockBehaviorFor(DifficultyTier.Hard),
+                Is.EqualTo(BlockBehavior.FullMixAdjacentSoftCommit));
         }
 
         // ---- (f) determinism -----------------------------------------------------------

@@ -168,19 +168,16 @@ namespace VG.Tests
             var set = new RngSet(seeds);
             for (int i = 0; i < 4; i++) firstDraws[i] = set.Get((RngStream)i).NextUInt();
 
-            Assert.Multiple(() =>
-            {
-                Assert.That(seeds.Version, Is.EqualTo(1));
-                Assert.That(seeds.Master, Is.EqualTo(0x123456789ABCDEF0UL));
-                Assert.That(seeds.Gacha, Is.EqualTo(GoldenVectors.Gacha), "Gacha");
-                Assert.That(seeds.Rally, Is.EqualTo(GoldenVectors.Rally), "Rally");
-                Assert.That(seeds.Ai, Is.EqualTo(GoldenVectors.Ai), "Ai");
-                Assert.That(seeds.Substats, Is.EqualTo(GoldenVectors.Substats), "Substats");
-                Assert.That(firstDraws[0], Is.EqualTo(GoldenVectors.FirstDraws[0]), "Draw.Gacha");
-                Assert.That(firstDraws[1], Is.EqualTo(GoldenVectors.FirstDraws[1]), "Draw.Rally");
-                Assert.That(firstDraws[2], Is.EqualTo(GoldenVectors.FirstDraws[2]), "Draw.Ai");
-                Assert.That(firstDraws[3], Is.EqualTo(GoldenVectors.FirstDraws[3]), "Draw.Substats");
-            });
+            Assert.That(seeds.Version, Is.EqualTo(1));
+            Assert.That(seeds.Master, Is.EqualTo(0x123456789ABCDEF0UL));
+            Assert.That(seeds.Gacha, Is.EqualTo(GoldenVectors.Gacha), "Gacha");
+            Assert.That(seeds.Rally, Is.EqualTo(GoldenVectors.Rally), "Rally");
+            Assert.That(seeds.Ai, Is.EqualTo(GoldenVectors.Ai), "Ai");
+            Assert.That(seeds.Substats, Is.EqualTo(GoldenVectors.Substats), "Substats");
+            Assert.That(firstDraws[0], Is.EqualTo(GoldenVectors.FirstDraws[0]), "Draw.Gacha");
+            Assert.That(firstDraws[1], Is.EqualTo(GoldenVectors.FirstDraws[1]), "Draw.Rally");
+            Assert.That(firstDraws[2], Is.EqualTo(GoldenVectors.FirstDraws[2]), "Draw.Ai");
+            Assert.That(firstDraws[3], Is.EqualTo(GoldenVectors.FirstDraws[3]), "Draw.Substats");
         }
     }
 }

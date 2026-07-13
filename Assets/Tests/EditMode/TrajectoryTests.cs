@@ -208,15 +208,12 @@ namespace VG.Tests
         public void Bounds_LandingOnALine_IsIn()
         {
             // Bug caught: exclusive boundary comparison — §2.4 "Landing on a line = in" [structural].
-            Assert.Multiple(() =>
-            {
-                Assert.That(CourtGeometry.IsInBounds(0f, 0f, CourtSide.PositiveZ), Is.True);
-                Assert.That(CourtGeometry.IsInBounds(9f, 9f, CourtSide.PositiveZ), Is.True);
-                Assert.That(CourtGeometry.IsInBounds(4.5f, -9f, CourtSide.NegativeZ), Is.True);
-                Assert.That(CourtGeometry.IsInBounds(9.0001f, 4f, CourtSide.PositiveZ), Is.False);
-                Assert.That(CourtGeometry.IsInBounds(4.5f, 9.0001f, CourtSide.PositiveZ), Is.False);
-                Assert.That(CourtGeometry.IsInBounds(4.5f, 0.0001f, CourtSide.NegativeZ), Is.False);
-            });
+            Assert.That(CourtGeometry.IsInBounds(0f, 0f, CourtSide.PositiveZ), Is.True);
+            Assert.That(CourtGeometry.IsInBounds(9f, 9f, CourtSide.PositiveZ), Is.True);
+            Assert.That(CourtGeometry.IsInBounds(4.5f, -9f, CourtSide.NegativeZ), Is.True);
+            Assert.That(CourtGeometry.IsInBounds(9.0001f, 4f, CourtSide.PositiveZ), Is.False);
+            Assert.That(CourtGeometry.IsInBounds(4.5f, 9.0001f, CourtSide.PositiveZ), Is.False);
+            Assert.That(CourtGeometry.IsInBounds(4.5f, 0.0001f, CourtSide.NegativeZ), Is.False);
         }
 
         // ---- §4.1 zone grid -----------------------------------------------------------------
@@ -239,15 +236,12 @@ namespace VG.Tests
         public void ZoneGrid_GridlineTieBreak_GoesToHigherIndexZone()
         {
             // Bug caught: ambiguous boundary ownership (documented tie-break in CourtGeometry).
-            Assert.Multiple(() =>
-            {
-                Assert.That(CourtGeometry.ZoneAt(3f, 3f), Is.EqualTo(ZoneId.z_CM));
-                Assert.That(CourtGeometry.ZoneAt(6f, 6f), Is.EqualTo(ZoneId.z_RB));
-                Assert.That(CourtGeometry.ZoneAt(0f, 0f), Is.EqualTo(ZoneId.z_LF));
-                // Mirrored half: attacker-local column L sits at HIGH x.
-                Assert.That(CourtGeometry.ZoneAt(6f, -3f), Is.EqualTo(ZoneId.z_CM).Or.EqualTo(ZoneId.z_CM));
-                Assert.That(CourtGeometry.ZoneAt(9f, -0.5f), Is.EqualTo(ZoneId.z_LF));
-            });
+            Assert.That(CourtGeometry.ZoneAt(3f, 3f), Is.EqualTo(ZoneId.z_CM));
+            Assert.That(CourtGeometry.ZoneAt(6f, 6f), Is.EqualTo(ZoneId.z_RB));
+            Assert.That(CourtGeometry.ZoneAt(0f, 0f), Is.EqualTo(ZoneId.z_LF));
+            // Mirrored half: attacker-local column L sits at HIGH x.
+            Assert.That(CourtGeometry.ZoneAt(6f, -3f), Is.EqualTo(ZoneId.z_CM).Or.EqualTo(ZoneId.z_CM));
+            Assert.That(CourtGeometry.ZoneAt(9f, -0.5f), Is.EqualTo(ZoneId.z_LF));
         }
 
         [Test]

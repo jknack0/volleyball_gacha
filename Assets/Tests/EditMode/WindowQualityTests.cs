@@ -107,16 +107,13 @@ namespace VG.Tests
         {
             const float w = 150f; // stat 0, ctx 1, assist 1
 
-            Assert.Multiple(() =>
-            {
-                Assert.That(ContactWindows.Classify(_t, 0f, w), Is.EqualTo(TimingGrade.Perfect));
-                Assert.That(ContactWindows.Classify(_t, 40f, w), Is.EqualTo(TimingGrade.Perfect), "boundary → better grade");
-                Assert.That(ContactWindows.Classify(_t, 40.01f, w), Is.EqualTo(TimingGrade.Great));
-                Assert.That(ContactWindows.Classify(_t, 90f, w), Is.EqualTo(TimingGrade.Great), "boundary → better grade");
-                Assert.That(ContactWindows.Classify(_t, 90.01f, w), Is.EqualTo(TimingGrade.Good));
-                Assert.That(ContactWindows.Classify(_t, 150f, w), Is.EqualTo(TimingGrade.Good), "boundary → better grade");
-                Assert.That(ContactWindows.Classify(_t, 150.01f, w), Is.EqualTo(TimingGrade.Miss));
-            });
+            Assert.That(ContactWindows.Classify(_t, 0f, w), Is.EqualTo(TimingGrade.Perfect));
+            Assert.That(ContactWindows.Classify(_t, 40f, w), Is.EqualTo(TimingGrade.Perfect), "boundary → better grade");
+            Assert.That(ContactWindows.Classify(_t, 40.01f, w), Is.EqualTo(TimingGrade.Great));
+            Assert.That(ContactWindows.Classify(_t, 90f, w), Is.EqualTo(TimingGrade.Great), "boundary → better grade");
+            Assert.That(ContactWindows.Classify(_t, 90.01f, w), Is.EqualTo(TimingGrade.Good));
+            Assert.That(ContactWindows.Classify(_t, 150f, w), Is.EqualTo(TimingGrade.Good), "boundary → better grade");
+            Assert.That(ContactWindows.Classify(_t, 150.01f, w), Is.EqualTo(TimingGrade.Miss));
         }
 
         // Contract: bands are centered on t* — early (negative) and late (positive) offsets of the
@@ -126,13 +123,10 @@ namespace VG.Tests
         public void Classify_CenteredBands_SignIrrelevant()
         {
             const float w = 150f;
-            Assert.Multiple(() =>
-            {
-                Assert.That(ContactWindows.Classify(_t, -40f, w), Is.EqualTo(TimingGrade.Perfect));
-                Assert.That(ContactWindows.Classify(_t, -90f, w), Is.EqualTo(TimingGrade.Great));
-                Assert.That(ContactWindows.Classify(_t, -150f, w), Is.EqualTo(TimingGrade.Good));
-                Assert.That(ContactWindows.Classify(_t, -151f, w), Is.EqualTo(TimingGrade.Miss));
-            });
+            Assert.That(ContactWindows.Classify(_t, -40f, w), Is.EqualTo(TimingGrade.Perfect));
+            Assert.That(ContactWindows.Classify(_t, -90f, w), Is.EqualTo(TimingGrade.Great));
+            Assert.That(ContactWindows.Classify(_t, -150f, w), Is.EqualTo(TimingGrade.Good));
+            Assert.That(ContactWindows.Classify(_t, -151f, w), Is.EqualTo(TimingGrade.Miss));
         }
 
         // Contract: beyond W_Good ⇒ Miss (§3.1), at any widening.
@@ -154,15 +148,12 @@ namespace VG.Tests
         public void Classify_BandEdges_ScaleWithWindow()
         {
             const float w = 300f;
-            Assert.Multiple(() =>
-            {
-                Assert.That(ContactWindows.Classify(_t, 80f, w), Is.EqualTo(TimingGrade.Perfect));
-                Assert.That(ContactWindows.Classify(_t, 80.01f, w), Is.EqualTo(TimingGrade.Great));
-                Assert.That(ContactWindows.Classify(_t, 180f, w), Is.EqualTo(TimingGrade.Great));
-                Assert.That(ContactWindows.Classify(_t, 180.01f, w), Is.EqualTo(TimingGrade.Good));
-                Assert.That(ContactWindows.Classify(_t, 300f, w), Is.EqualTo(TimingGrade.Good));
-                Assert.That(ContactWindows.Classify(_t, 300.01f, w), Is.EqualTo(TimingGrade.Miss));
-            });
+            Assert.That(ContactWindows.Classify(_t, 80f, w), Is.EqualTo(TimingGrade.Perfect));
+            Assert.That(ContactWindows.Classify(_t, 80.01f, w), Is.EqualTo(TimingGrade.Great));
+            Assert.That(ContactWindows.Classify(_t, 180f, w), Is.EqualTo(TimingGrade.Great));
+            Assert.That(ContactWindows.Classify(_t, 180.01f, w), Is.EqualTo(TimingGrade.Good));
+            Assert.That(ContactWindows.Classify(_t, 300f, w), Is.EqualTo(TimingGrade.Good));
+            Assert.That(ContactWindows.Classify(_t, 300.01f, w), Is.EqualTo(TimingGrade.Miss));
         }
 
         // ---------------------------------------------------------------- §3.1 governing stats
@@ -177,15 +168,12 @@ namespace VG.Tests
             // Distinct normalized values: Power .5, Jump .3, Technique .9, Serve .7, Receive .2, Speed .6
             var stats = new StatBlock { Power = 100, Jump = 60, Technique = 180, Serve = 140, Receive = 40, Speed = 120 };
 
-            Assert.Multiple(() =>
-            {
-                Assert.That(ContactWindows.GoverningStatC(ContactType.Serve, in stats), Is.EqualTo(0.6f).Within(1e-5f));   // (Serve+Power)/2
-                Assert.That(ContactWindows.GoverningStatC(ContactType.Receive, in stats), Is.EqualTo(0.4f).Within(1e-5f)); // (Receive+Speed)/2
-                Assert.That(ContactWindows.GoverningStatC(ContactType.Dig, in stats), Is.EqualTo(0.4f).Within(1e-5f));     // same as Receive
-                Assert.That(ContactWindows.GoverningStatC(ContactType.Set, in stats), Is.EqualTo(0.9f).Within(1e-5f));     // Technique
-                Assert.That(ContactWindows.GoverningStatC(ContactType.Spike, in stats), Is.EqualTo(0.4f).Within(1e-5f));   // (Power+Jump)/2
-                Assert.That(ContactWindows.GoverningStatC(ContactType.Block, in stats), Is.EqualTo(0.6f).Within(1e-5f));   // (Jump+Technique)/2
-            });
+            Assert.That(ContactWindows.GoverningStatC(ContactType.Serve, in stats), Is.EqualTo(0.6f).Within(1e-5f));   // (Serve+Power)/2
+            Assert.That(ContactWindows.GoverningStatC(ContactType.Receive, in stats), Is.EqualTo(0.4f).Within(1e-5f)); // (Receive+Speed)/2
+            Assert.That(ContactWindows.GoverningStatC(ContactType.Dig, in stats), Is.EqualTo(0.4f).Within(1e-5f));     // same as Receive
+            Assert.That(ContactWindows.GoverningStatC(ContactType.Set, in stats), Is.EqualTo(0.9f).Within(1e-5f));     // Technique
+            Assert.That(ContactWindows.GoverningStatC(ContactType.Spike, in stats), Is.EqualTo(0.4f).Within(1e-5f));   // (Power+Jump)/2
+            Assert.That(ContactWindows.GoverningStatC(ContactType.Block, in stats), Is.EqualTo(0.6f).Within(1e-5f));   // (Jump+Technique)/2
         }
 
         // ---------------------------------------------------------------- §3.2 quality
@@ -265,19 +253,16 @@ namespace VG.Tests
         [Test]
         public void ReceiveGradeOf_Thresholds_Exhaustive_EdgesInclusive()
         {
-            Assert.Multiple(() =>
-            {
-                Assert.That(QualityMath.ReceiveGradeOf(_t, 1.00f), Is.EqualTo(ReceiveGrade.S));
-                Assert.That(QualityMath.ReceiveGradeOf(_t, 0.85f), Is.EqualTo(ReceiveGrade.S), "exact threshold → S");
-                Assert.That(QualityMath.ReceiveGradeOf(_t, 0.8499f), Is.EqualTo(ReceiveGrade.A));
-                Assert.That(QualityMath.ReceiveGradeOf(_t, 0.65f), Is.EqualTo(ReceiveGrade.A), "exact threshold → A");
-                Assert.That(QualityMath.ReceiveGradeOf(_t, 0.6499f), Is.EqualTo(ReceiveGrade.B));
-                Assert.That(QualityMath.ReceiveGradeOf(_t, 0.45f), Is.EqualTo(ReceiveGrade.B), "exact threshold → B");
-                Assert.That(QualityMath.ReceiveGradeOf(_t, 0.4499f), Is.EqualTo(ReceiveGrade.C));
-                Assert.That(QualityMath.ReceiveGradeOf(_t, 0.25f), Is.EqualTo(ReceiveGrade.C), "exact threshold → C");
-                Assert.That(QualityMath.ReceiveGradeOf(_t, 0.2499f), Is.EqualTo(ReceiveGrade.Shank));
-                Assert.That(QualityMath.ReceiveGradeOf(_t, 0f), Is.EqualTo(ReceiveGrade.Shank));
-            });
+            Assert.That(QualityMath.ReceiveGradeOf(_t, 1.00f), Is.EqualTo(ReceiveGrade.S));
+            Assert.That(QualityMath.ReceiveGradeOf(_t, 0.85f), Is.EqualTo(ReceiveGrade.S), "exact threshold → S");
+            Assert.That(QualityMath.ReceiveGradeOf(_t, 0.8499f), Is.EqualTo(ReceiveGrade.A));
+            Assert.That(QualityMath.ReceiveGradeOf(_t, 0.65f), Is.EqualTo(ReceiveGrade.A), "exact threshold → A");
+            Assert.That(QualityMath.ReceiveGradeOf(_t, 0.6499f), Is.EqualTo(ReceiveGrade.B));
+            Assert.That(QualityMath.ReceiveGradeOf(_t, 0.45f), Is.EqualTo(ReceiveGrade.B), "exact threshold → B");
+            Assert.That(QualityMath.ReceiveGradeOf(_t, 0.4499f), Is.EqualTo(ReceiveGrade.C));
+            Assert.That(QualityMath.ReceiveGradeOf(_t, 0.25f), Is.EqualTo(ReceiveGrade.C), "exact threshold → C");
+            Assert.That(QualityMath.ReceiveGradeOf(_t, 0.2499f), Is.EqualTo(ReceiveGrade.Shank));
+            Assert.That(QualityMath.ReceiveGradeOf(_t, 0f), Is.EqualTo(ReceiveGrade.Shank));
         }
 
         // Contract: the whole quality range [0,1] maps to some grade with no dead gaps, and the

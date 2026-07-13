@@ -41,14 +41,11 @@ namespace VG.Tests
         public void OnlyPlayableShank_CapsSetGradeAtGood()
         {
             // Bug caught: the cap leaking onto clean receives (punishes good play) or missing on Shank.
-            Assert.Multiple(() =>
-            {
-                Assert.That(Cascade.CapsSetGradeAtGood(ReceiveGrade.Shank), Is.True);
-                Assert.That(Cascade.CapsSetGradeAtGood(ReceiveGrade.C), Is.False);
-                Assert.That(Cascade.CapsSetGradeAtGood(ReceiveGrade.B), Is.False);
-                Assert.That(Cascade.CapsSetGradeAtGood(ReceiveGrade.A), Is.False);
-                Assert.That(Cascade.CapsSetGradeAtGood(ReceiveGrade.S), Is.False);
-            });
+            Assert.That(Cascade.CapsSetGradeAtGood(ReceiveGrade.Shank), Is.True);
+            Assert.That(Cascade.CapsSetGradeAtGood(ReceiveGrade.C), Is.False);
+            Assert.That(Cascade.CapsSetGradeAtGood(ReceiveGrade.B), Is.False);
+            Assert.That(Cascade.CapsSetGradeAtGood(ReceiveGrade.A), Is.False);
+            Assert.That(Cascade.CapsSetGradeAtGood(ReceiveGrade.S), Is.False);
         }
 
         [Test]
@@ -56,17 +53,14 @@ namespace VG.Tests
         {
             // Bug caught: §3.5 ctx inverted (bad sets widening spike windows) or Miss producing a spike.
             var t = new CascadeTunables();
-            Assert.Multiple(() =>
-            {
-                Assert.That(Cascade.TryGetSpikeWindowCtx(t, TimingGrade.Perfect, out float p), Is.True);
-                Assert.That(p, Is.EqualTo(1.25f));
-                Assert.That(Cascade.TryGetSpikeWindowCtx(t, TimingGrade.Great, out float g), Is.True);
-                Assert.That(g, Is.EqualTo(1.0f));
-                Assert.That(Cascade.TryGetSpikeWindowCtx(t, TimingGrade.Good, out float gd), Is.True);
-                Assert.That(gd, Is.EqualTo(0.75f));
-                Assert.That(Cascade.TryGetSpikeWindowCtx(t, TimingGrade.Miss, out _), Is.False,
-                    "Miss set must route a free ball, never a spike");
-            });
+            Assert.That(Cascade.TryGetSpikeWindowCtx(t, TimingGrade.Perfect, out float p), Is.True);
+            Assert.That(p, Is.EqualTo(1.25f));
+            Assert.That(Cascade.TryGetSpikeWindowCtx(t, TimingGrade.Great, out float g), Is.True);
+            Assert.That(g, Is.EqualTo(1.0f));
+            Assert.That(Cascade.TryGetSpikeWindowCtx(t, TimingGrade.Good, out float gd), Is.True);
+            Assert.That(gd, Is.EqualTo(0.75f));
+            Assert.That(Cascade.TryGetSpikeWindowCtx(t, TimingGrade.Miss, out _), Is.False,
+                "Miss set must route a free ball, never a spike");
         }
     }
 }

@@ -125,38 +125,35 @@ namespace VG.Tests
         public void PointResolved_IsReachable_FromEveryContactState()
         {
             // Bug caught: a contact state with no path to rally termination (soft-locked rally).
-            Assert.Multiple(() =>
-            {
-                var m = At(RallyState.ServeAim);
-                m.Fire(RallyTrigger.ServeReleased);
-                m.Fire(RallyTrigger.TrajectoryAuthored);
-                m.Fire(RallyTrigger.TerminalOutcome); // service fault
-                Assert.That(m.CurrentState, Is.EqualTo(RallyState.PointResolved), "from ServeAim");
+            var m = At(RallyState.ServeAim);
+            m.Fire(RallyTrigger.ServeReleased);
+            m.Fire(RallyTrigger.TrajectoryAuthored);
+            m.Fire(RallyTrigger.TerminalOutcome); // service fault
+            Assert.That(m.CurrentState, Is.EqualTo(RallyState.PointResolved), "from ServeAim");
 
-                m = At(RallyState.ReceiveWindow);
-                m.Fire(RallyTrigger.ReceiveFailed); // ace
-                Assert.That(m.CurrentState, Is.EqualTo(RallyState.PointResolved), "from ReceiveWindow");
+            m = At(RallyState.ReceiveWindow);
+            m.Fire(RallyTrigger.ReceiveFailed); // ace
+            Assert.That(m.CurrentState, Is.EqualTo(RallyState.PointResolved), "from ReceiveWindow");
 
-                m = At(RallyState.SetSelect);
-                m.Fire(RallyTrigger.LaneChosen);
-                m.Fire(RallyTrigger.TerminalOutcome); // set sails out
-                Assert.That(m.CurrentState, Is.EqualTo(RallyState.PointResolved), "from SetSelect");
+            m = At(RallyState.SetSelect);
+            m.Fire(RallyTrigger.LaneChosen);
+            m.Fire(RallyTrigger.TerminalOutcome); // set sails out
+            Assert.That(m.CurrentState, Is.EqualTo(RallyState.PointResolved), "from SetSelect");
 
-                m = At(RallyState.AttackApproach);
-                m.Fire(RallyTrigger.ApexPassed);
-                m.Fire(RallyTrigger.TrajectoryAuthored);
-                m.Fire(RallyTrigger.TerminalOutcome);
-                Assert.That(m.CurrentState, Is.EqualTo(RallyState.PointResolved), "from AttackApproach");
+            m = At(RallyState.AttackApproach);
+            m.Fire(RallyTrigger.ApexPassed);
+            m.Fire(RallyTrigger.TrajectoryAuthored);
+            m.Fire(RallyTrigger.TerminalOutcome);
+            Assert.That(m.CurrentState, Is.EqualTo(RallyState.PointResolved), "from AttackApproach");
 
-                m = At(RallyState.AttackContact);
-                m.Fire(RallyTrigger.TrajectoryAuthored);
-                m.Fire(RallyTrigger.TerminalOutcome); // kill
-                Assert.That(m.CurrentState, Is.EqualTo(RallyState.PointResolved), "from AttackContact");
+            m = At(RallyState.AttackContact);
+            m.Fire(RallyTrigger.TrajectoryAuthored);
+            m.Fire(RallyTrigger.TerminalOutcome); // kill
+            Assert.That(m.CurrentState, Is.EqualTo(RallyState.PointResolved), "from AttackContact");
 
-                m = At(RallyState.DigWindow);
-                m.Fire(RallyTrigger.TerminalOutcome);
-                Assert.That(m.CurrentState, Is.EqualTo(RallyState.PointResolved), "from DigWindow");
-            });
+            m = At(RallyState.DigWindow);
+            m.Fire(RallyTrigger.TerminalOutcome);
+            Assert.That(m.CurrentState, Is.EqualTo(RallyState.PointResolved), "from DigWindow");
         }
 
         [Test]
