@@ -52,6 +52,7 @@ namespace VG.Gameplay.Match
         private readonly MatchResult _result;
 
         private readonly int[] _rotation = new int[2];
+        private readonly int _teamSize;
         private readonly int[] _setOptionUses = new int[8];
         private int _decisionsPerSide;
 
@@ -82,6 +83,7 @@ namespace VG.Gameplay.Match
         {
             _config = config ?? throw new ArgumentNullException(nameof(config));
             _point = pointTunables ?? new PointResolutionTunables();
+            _teamSize = config.TeamSize;
             _rng = RngSet.FromMaster(config.MasterSeed);
             _hype = new HypeMeters(_hypeT);
             _result = new MatchResult { Format = config.Format, Seeds = _rng.Seeds };
@@ -114,10 +116,13 @@ namespace VG.Gameplay.Match
 
         /// <summary>Capsule standing point for a team's court position 1..6 (M0: slot-static).</summary>
         public Vec3 PlayerPosition(TeamSide side, int courtPosition)
-            => CourtSlots.Position(side, courtPosition);
+            => CourtSlots.Position(side, courtPosition, _teamSize);
 
         public string PlayerNameAt(TeamSide side, int courtPosition)
             => AtPosition(side, courtPosition).Name;
+
+        /// <summary>Players per side (3 or 6) — the view builds this many capsules.</summary>
+        public int PlayerCount => _teamSize;
 
         /// <summary>Play the whole match headlessly (SimRunner path): loop Tick until done.</summary>
         public MatchResult Run()
@@ -191,7 +196,7 @@ namespace VG.Gameplay.Match
                     _logClosed = false;
                     _plan = FlightPlan.None;
                     _blockDecided = false;
-                    _ballRest = CourtSlots.ServeLaunch(_serving, 2.0f);
+                    _ballRest = CourtSlots.ServeLaunch(_serving, 2.0f, _teamSize);
                     break;
 
                 case RallyState.PointResolved:
@@ -219,7 +224,7 @@ namespace VG.Gameplay.Match
             TeamSide winner = _log.WonByHome ? TeamSide.Home : TeamSide.Away;
             if (winner != _serving)
             {
-                _rotation[(int)winner] = (_rotation[(int)winner] + 1) % 6;
+                _rotation[(int)winner] = (_rotation[(int)winner] + 1) % _teamSize;
                 _serving = winner;
             }
         }
@@ -248,7 +253,7 @@ namespace VG.Gameplay.Match
             if (jumpServe) q = Math.Min(1f, q + 0.15f); // §4.2 [tunable]
             RecordContact(grade, q, _serving);
 
-            Vec3 launch = CourtSlots.ServeLaunch(_serving, jumpServe ? 2.1f : 2.0f);
+            Vec3 launch = CourtSlots.ServeLaunch(_serving, jumpServe ? 2.1f : 2.0f, _teamSize);
             Vec3 end = AimPoint(Other(_serving), target, q);
             TrajectoryParams p = jumpServe
                 ? _ball.ServeJump(launch, end)
@@ -283,12 +288,12 @@ namespace VG.Gameplay.Match
             if (!Cascade.TryGetSpikeWindowCtx(_cascade, grade, out _))
             {
                 _machine.Fire(RallyTrigger.LaneChosen); // T8 → BallInFlight
-                BeginFreeBall(_possession, CourtSlots.Position(_possession, 2));
+                BeginFreeBall(_possession, CourtSlots.Position(_possession, 2, _teamSize));
                 return;
             }
 
             _pendingOption = option;
-            Vec3 setterPos = CourtSlots.Position(_possession, 2);
+            Vec3 setterPos = CourtSlots.Position(_possession, 2, _teamSize);
             var attackerSlot = AttackerSlot(_possession, option);
             Vec3 start = new Vec3(setterPos.X, 1.8f, setterPos.Z);
             Vec3 end = new Vec3(attackerSlot.X, 2.0f, attackerSlot.Z);
@@ -317,7 +322,7 @@ namespace VG.Gameplay.Match
         {
             _machine.Fire(RallyTrigger.AttackTapped); // T10 → AttackContact (instantaneous)
 
-            var attacker = AtPosition(_possession, AttackerPositionFor(_pendingOption));
+            var attacker = AtPosition(_possession, Formation.AttackerFor(_teamSize, _pendingOption));
             TimingGrade grade = SampleGrade(_possession);
             float q = QualityMath.Quality(_res, grade, StatC(attacker, StatId.Power, StatId.Jump));
             RecordContact(grade, q, _possession);
@@ -455,7 +460,7 @@ namespace VG.Gameplay.Match
                             _possession = Other(_possession);
                             _receiveGrade = _pendingRes.DigDisplayGrade;
                             _plan = FlightPlan.None;
-                            _ballRest = CourtSlots.Position(_possession, 2);
+                            _ballRest = CourtSlots.Position(_possession, 2, _teamSize);
                             break;
 
                         case AttackOutcome.Kill:
@@ -504,13 +509,13 @@ namespace VG.Gameplay.Match
             _possession = receiving;
             _receiveGrade = display;
             _plan = FlightPlan.None;
-            _ballRest = CourtSlots.Position(receiving, 2);
+            _ballRest = CourtSlots.Position(receiving, 2, _teamSize);
         }
 
         private void EvaluateFreeBallReceive()
         {
             TeamSide receiving = Other(ThrowerOf(FlightPlan.FreeBall));
-            var receiver = AtPosition(receiving, 6); // free balls target mid-court (§2.3)
+            var receiver = AtPosition(receiving, Formation.FreeBallReceiver(_teamSize)); // free balls target mid-court (§2.3)
             TimingGrade grade = SampleGrade(receiving);
             float q = QualityMath.Quality(_res, grade, StatC(receiver, StatId.Receive, StatId.Speed));
             RecordContact(grade, q, receiving);
@@ -530,7 +535,7 @@ namespace VG.Gameplay.Match
             _possession = receiving;
             _receiveGrade = display;
             _plan = FlightPlan.None;
-            _ballRest = CourtSlots.Position(receiving, 2);
+            _ballRest = CourtSlots.Position(receiving, 2, _teamSize);
         }
 
         private void TerminalFromFlight(RallyOutcome outcome, TeamSide winner, TeamSide? errorBy = null)
@@ -554,7 +559,7 @@ namespace VG.Gameplay.Match
 
         private PlayerSpec AtPosition(TeamSide side, int courtPosition)
         {
-            int idx = (courtPosition - 1 + _rotation[(int)side]) % 6;
+            int idx = (courtPosition - 1 + _rotation[(int)side]) % _teamSize;
             return Team(side).Players[idx];
         }
 
@@ -607,8 +612,9 @@ namespace VG.Gameplay.Match
                 TeamSide recv = Other(serving);
                 ZoneId best = ZoneId.z_CB;
                 int weakest = int.MaxValue;
-                Span<int> positions = stackalloc int[] { 1, 6, 5 };
-                Span<ZoneId> zones = stackalloc ZoneId[] { ZoneId.z_LB, ZoneId.z_CB, ZoneId.z_RB };
+                Span<int> positions = stackalloc int[3];
+                Span<ZoneId> zones = stackalloc ZoneId[3];
+                Formation.WeakReceiverScan(_teamSize, positions, zones);
                 for (int i = 0; i < 3; i++)
                 {
                     int r = AtPosition(recv, positions[i]).Stats.Raw(StatId.Receive);
@@ -659,35 +665,21 @@ namespace VG.Gameplay.Match
             return candidates[pick];
         }
 
-        private static int AttackerPositionFor(SetOption option)
-        {
-            switch (option) // [tunable v0 role mapping]
-            {
-                case SetOption.QuickMiddle: return 3;
-                case SetOption.HighOutside: return 4;
-                case SetOption.BackRowPipe: return 6;
-                default: return 2;
-            }
-        }
 
         private Vec3 AttackerSlot(TeamSide side, SetOption option)
-            => CourtSlots.Position(side, AttackerPositionFor(option));
+            => CourtSlots.Position(side, Formation.AttackerFor(_teamSize, option), _teamSize);
 
         private PlayerSpec ReceiverFor(TeamSide side, ZoneId landing)
         {
-            switch (PointResolution.ZoneColumn(landing)) // [tunable v0: back row by column]
-            {
-                case 0: return AtPosition(side, 1);
-                case 1: return AtPosition(side, 6);
-                default: return AtPosition(side, 5);
-            }
+            // [tunable v0: coverage by attacker-view landing column, per formation]
+            return AtPosition(side, Formation.ReceiverForColumn(_teamSize, PointResolution.ZoneColumn(landing)));
         }
 
         private BlockState ChooseBlock(TeamSide defending, SetOption option)
         {
             int lane = option == SetOption.HighOutside ? 0 : 1; // [tunable v0]
             var tier = Team(defending).Tier;
-            var blocker = AtPosition(defending, 3);
+            var blocker = AtPosition(defending, Formation.BlockerFor(_teamSize, lane));
             TimingGrade g = SampleGrade(defending);
             float qb = QualityMath.Quality(_res, g, StatC(blocker, StatId.Jump, StatId.Technique));
 

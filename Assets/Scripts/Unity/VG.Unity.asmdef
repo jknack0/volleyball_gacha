@@ -3,7 +3,8 @@
     "rootNamespace": "VG.Unity",
     "references": [
         "VG.Data",
-        "VG.Gameplay"
+        "VG.Gameplay",
+        "Unity.InputSystem"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

@@ -44,6 +44,7 @@ namespace VG.SimRunner
             public int HomeRaw = 100;
             public int AwayRaw = 100;
             public MatchFormat Format = MatchFormat.To11;
+            public int Size = 6;
             public string JsonPath;
         }
 
@@ -63,6 +64,7 @@ namespace VG.SimRunner
                     case "--home-raw": o.HomeRaw = int.Parse(v); break;
                     case "--away-raw": o.AwayRaw = int.Parse(v); break;
                     case "--format": o.Format = (MatchFormat)int.Parse(v); break;
+                    case "--size": o.Size = int.Parse(v); break;
                     case "--json": o.JsonPath = v; break;
                 }
             }
@@ -73,8 +75,8 @@ namespace VG.SimRunner
             PointResolutionTunables point = null,
             GradeDistribution? homeProxy = null, GradeDistribution? awayProxy = null)
             => new MatchSim(new MatchConfig(
-                TeamSpec.Uniform("H", o.HomeRaw, o.HomeTier, homeProxy),
-                TeamSpec.Uniform("A", o.AwayRaw, o.AwayTier, awayProxy),
+                TeamSpec.Uniform("H", o.HomeRaw, o.HomeTier, homeProxy, o.Size),
+                TeamSpec.Uniform("A", o.AwayRaw, o.AwayTier, awayProxy, o.Size),
                 o.Format, seed), point).Run();
 
         // ---- aggregation --------------------------------------------------------------------

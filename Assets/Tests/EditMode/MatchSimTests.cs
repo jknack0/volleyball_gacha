@@ -127,5 +127,52 @@ namespace VG.Tests
             Assert.That(hardWins, Is.GreaterThan(n * 2 / 3),
                 $"Hard AI only won {hardWins}/{n} vs Easy on equal stats — tiers are not distinguishable");
         }
+
+        // ---- 3v3 (PLAN §2.4 fallback, now a config knob) -------------------------------------
+
+        private static MatchConfig Config3(ulong seed)
+            => new MatchConfig(
+                TeamSpec.Uniform("H", 100, DifficultyTier.Normal, teamSize: 3),
+                TeamSpec.Uniform("A", 100, DifficultyTier.Normal, teamSize: 3),
+                MatchFormat.To11, seed);
+
+        [Test]
+        public void ThreeVThree_IsDeterministic()
+        {
+            // Bug caught: formation lookups introducing nondeterminism or size-dependent RNG drift.
+            var a = new MatchSim(Config3(42)).Run();
+            var b = new MatchSim(Config3(42)).Run();
+            Assert.That(b.HomeScore, Is.EqualTo(a.HomeScore));
+            Assert.That(b.AwayScore, Is.EqualTo(a.AwayScore));
+            Assert.That(b.Rallies.Count, Is.EqualTo(a.Rallies.Count));
+        }
+
+        [Test]
+        public void ThreeVThree_Terminates_AndScoresAreLegal()
+        {
+            // Bug caught: 3-player rotation/role tables soft-locking rallies or breaking scoring.
+            for (ulong seed = 0; seed < 20; seed++)
+            {
+                var r = new MatchSim(Config3(seed * 131 + 7)).Run();
+                int hi = System.Math.Max(r.HomeScore, r.AwayScore);
+                int lo = System.Math.Min(r.HomeScore, r.AwayScore);
+                Assert.That(hi, Is.GreaterThanOrEqualTo(11), $"seed {seed}");
+                Assert.That(hi - lo, Is.GreaterThanOrEqualTo(2), $"seed {seed}: win-by-2");
+                Assert.That(r.Rallies.Count, Is.EqualTo(r.HomeScore + r.AwayScore), $"seed {seed}");
+            }
+        }
+
+        [Test]
+        public void InvalidTeamSizes_AreRejected()
+        {
+            // Bug caught: formation tables silently indexed with an unsupported size.
+            Assert.Throws<System.ArgumentOutOfRangeException>(
+                () => TeamSpec.Uniform("X", 100, DifficultyTier.Normal, teamSize: 4));
+            Assert.Throws<System.ArgumentException>(
+                () => new MatchConfig(
+                    TeamSpec.Uniform("H", 100, DifficultyTier.Normal, teamSize: 3),
+                    TeamSpec.Uniform("A", 100, DifficultyTier.Normal),
+                    MatchFormat.To11, 1));
+        }
     }
 }

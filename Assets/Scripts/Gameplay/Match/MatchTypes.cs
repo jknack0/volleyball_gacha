@@ -19,7 +19,7 @@ namespace VG.Gameplay.Match
         }
     }
 
-    /// <summary>Six players in initial rotation order (court positions 1..6) + the AI tier driving them.</summary>
+    /// <summary>Players in initial rotation order (court positions 1..N) + the AI tier driving them. N ∈ {3, 6} (Formation).</summary>
     public sealed class TeamSpec
     {
         public readonly PlayerSpec[] Players;
@@ -30,18 +30,22 @@ namespace VG.Gameplay.Match
 
         public TeamSpec(PlayerSpec[] players, DifficultyTier tier, GradeDistribution? gradeOverride = null)
         {
-            if (players == null || players.Length != 6)
-                throw new ArgumentException("A team is exactly 6 players (M0: no libero/bench — meta layer, M2).", nameof(players));
+            if (players == null) throw new ArgumentNullException(nameof(players));
+            Formation.ValidateSize(players.Length);
             Players = players;
             Tier = tier;
             GradeOverride = gradeOverride;
         }
 
+        /// <summary>3 or 6 — drives Formation lookups everywhere (PLAN §2.4: 6v6 default, 3v3 the named fallback).</summary>
+        public int TeamSize => Players.Length;
+
         /// <summary>A uniform team where every player has every stat at <paramref name="raw"/> (0–200).</summary>
-        public static TeamSpec Uniform(string prefix, int raw, DifficultyTier tier, GradeDistribution? gradeOverride = null)
+        public static TeamSpec Uniform(string prefix, int raw, DifficultyTier tier, GradeDistribution? gradeOverride = null, int teamSize = 6)
         {
-            var players = new PlayerSpec[6];
-            for (int i = 0; i < 6; i++)
+            Formation.ValidateSize(teamSize);
+            var players = new PlayerSpec[teamSize];
+            for (int i = 0; i < teamSize; i++)
             {
                 players[i] = new PlayerSpec($"{prefix}{i + 1}", new StatBlock
                 {
@@ -59,10 +63,15 @@ namespace VG.Gameplay.Match
         public readonly MatchFormat Format;
         public readonly ulong MasterSeed;
 
+        /// <summary>Both teams' size — enforced equal at construction.</summary>
+        public int TeamSize => Home.TeamSize;
+
         public MatchConfig(TeamSpec home, TeamSpec away, MatchFormat format, ulong masterSeed)
         {
             Home = home ?? throw new ArgumentNullException(nameof(home));
             Away = away ?? throw new ArgumentNullException(nameof(away));
+            if (home.TeamSize != away.TeamSize)
+                throw new ArgumentException($"Team sizes differ: {home.TeamSize} vs {away.TeamSize}.");
             Format = format;
             MasterSeed = masterSeed;
         }
