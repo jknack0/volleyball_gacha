@@ -266,6 +266,8 @@ Per contract: per-team 0–100; threshold 100 → Ignition; signature moves spen
 | Dug an `A ≥ 0.8` spike | +8 |
 | Own error (net/out) | −6 |
 
+Ignition semantics [structural, decided at VB-9]: Ignition **latches** when a team's Hype first reaches 100 and persists for the rest of the match; spending Hype on signatures never revokes it — activation gates on "Hype ≥ move cost" (§1.3), not on Ignition.
+
 ---
 
 ## 4. Aim Model
@@ -367,6 +369,8 @@ AI never "taps" — it samples its timing grade directly from a per-tier distrib
 | Hard | 0.45 | 0.35 | 0.15 | 0.05 |
 
 All [tunable]. Story rubber-banding (M1+, disclosed per PLAN.md §2.6) shifts these ±one column; not in M0.
+
+M0 note [v0, decided at MatchSim]: AI-sampled grades bypass §3.5's set-grade→spike-window ctx (the AI has no windows to scale). Symmetric across both sides, so mirror-match validity holds; M1 revisits via a grade-distribution shift keyed to set grade.
 
 ### 6.3 Tactic vocabulary per tier [structural]
 

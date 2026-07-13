@@ -4,6 +4,33 @@ Ticket conventions: `VB-N` ids are stable. **Blocked by** = hard dependency (don
 
 Priorities: `P0` = critical path now · `P1` = M0 scope · `P2` = post-gate.
 
+## Status — 2026-07-13 (update this table with every landing commit)
+
+| Ticket | State | Evidence |
+|---|---|---|
+| VB-1 | ◐ repo hygiene/LFS done; Unity-editor verification pending install | `fdc730a` |
+| VB-2 | ◐ manifest + asmdefs authored; package resolution verifies on first editor open | `fdc730a` |
+| VB-3 | ✅ RNG streams, golden-pinned | `fdc730a` |
+| VB-4 | ✅ window/quality math (constants audited vs §3) | `88ae07b` |
+| VB-5 | ✅ rally state machine, table 1:1 | `88ae07b` |
+| VB-6 | ✅ trajectories + net rulings + zone grid | `88ae07b` |
+| VB-7 | ✅ cascade matrices | `15f0861` |
+| VB-8 | ✅ §3.6 point-resolution pipeline | `15f0861` |
+| VB-9 | ✅ Hype/Ignition + primitives (a)–(f) | `cf65858` |
+| VB-10 | ✅ AI utility/sampling/vocabulary | `cf65858` |
+| VB-11 | ◐ runner (batch/mirror/transcript) live, mirror suite PASS; open: JSON report output, player skill-proxy profiles | `2caac05` |
+| VB-12..20 | ⏳ blocked on Unity 6 editor install (user-side) | — |
+| VB-21..23 | ⏳ gate-blocked by design | — |
+
+Suite: **168 EditMode tests green** — `~/.dotnet/dotnet test tools/VG.SimTests/VG.SimTests.csproj`.
+
+**Unticketed work landed:** `MatchSim` composition layer (`Assets/Scripts/Gameplay/Match/`) — full deterministic AI-vs-AI headless matches; implicit prerequisite of VB-11, consumed by VB-12/VB-18. Demo: `~/.dotnet/dotnet run --project tools/VG.SimRunner -c Release -- transcript --tier Normal --seed 42`.
+
+**First balance data (`2caac05`):** mirror 50.05%/2000 PASS (no side/serve bias); Normal-vs-Normal median rally 4.0 contacts (band [4,9] passes) but **43% two-contact rallies — ace-heavy**; primary tuning target `PointResolutionTunables.DigBase/DigPerAEff`. Easy 0/300 vs Hard — tier wall, M1 story-pacing lever.
+
+**Design decisions promoted from code to spec:** Ignition latches (m0-gameplay-spec §3.7 note); AI v0 bypasses §3.5 spike-window ctx (m0-gameplay-spec §6.2 note).
+
+
 ## Dependency graph
 
 ```mermaid
