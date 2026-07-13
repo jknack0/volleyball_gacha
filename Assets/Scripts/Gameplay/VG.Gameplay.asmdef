@@ -1,0 +1,16 @@
+{
+    "name": "VG.Gameplay",
+    "rootNamespace": "VG.Gameplay",
+    "references": [
+        "VG.Data"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": true
+}

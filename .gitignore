@@ -1,0 +1,28 @@
+# Unity generated
+/[Ll]ibrary/
+/[Tt]emp/
+/[Oo]bj/
+/[Bb]uild/
+/[Bb]uilds/
+/[Ll]ogs/
+/[Uu]ser[Ss]ettings/
+/MemoryCaptures/
+/[Rr]ecordings/
+
+# Unity IDE integration (generated at project root; tools/ csprojs are real)
+/*.csproj
+/*.sln
+/.vsconfig
+/.idea/
+/.vs/
+*.user
+
+# Addressables build artifacts
+/[Aa]ssets/StreamingAssets/aa/
+
+# dotnet build output (engine-free test host / sim runner)
+tools/**/bin/
+tools/**/obj/
+
+# macOS
+.DS_Store
