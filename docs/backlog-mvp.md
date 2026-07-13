@@ -8,8 +8,8 @@ Priorities: `P0` = critical path now · `P1` = M0 scope · `P2` = post-gate.
 
 | Ticket | State | Evidence |
 |---|---|---|
-| VB-1 | ◐ repo hygiene/LFS done; Unity 6000.0.79f1 + iOS module installed headlessly, version pinned; **remaining: Unity Hub sign-in (license), then first-open verification** | `fdc730a`, `3b37f79` |
-| VB-2 | ◐ manifest + asmdefs authored; package resolution verifies on first licensed open | `fdc730a` |
+| VB-1 | ✅ Unity 6000.0.79f1 + iOS installed (headless), licensed, first open clean on pinned version; LFS/hygiene done | `fdc730a`, `3b37f79`, `2bd1024` |
+| VB-2 | ✅ packages resolved, asmdef graph compiles in-editor, both test asms run (169 EditMode + 1 PlayMode green in Unity) | `fdc730a`, `2bd1024` |
 | VB-3 | ✅ RNG streams, golden-pinned | `fdc730a` |
 | VB-4 | ✅ window/quality math (constants audited vs §3) | `88ae07b` |
 | VB-5 | ✅ rally state machine, table 1:1 | `88ae07b` |
@@ -19,11 +19,11 @@ Priorities: `P0` = critical path now · `P1` = M0 scope · `P2` = post-gate.
 | VB-9 | ✅ Hype/Ignition + primitives (a)–(f) | `cf65858` |
 | VB-10 | ✅ AI utility/sampling/vocabulary | `cf65858` |
 | VB-11 | ✅ runner (batch/mirror/transcript/sweep/calibrate/economy), JSON reports, skill proxies — all three standing suites operational | `2caac05`+ |
-| VB-12 | ◐ engine-free 80% done: MatchSim rewritten tick-driven (ball observable per tick, outcomes revealed at physical ticks, CourtSlots shared sim/view); Unity layer staged (`VG.Unity` asmdef + self-bootstrapping `GreyBoxMatch` — press Play in any empty scene); **compile+run verification blocked on license sign-in** | `3b37f79`+ |
-| VB-13..20 | ⏳ blocked on license sign-in → VB-12 verification | — |
+| VB-12 | ◐ tick engine + grey-box view VERIFIED in-editor (PlayMode smoke: self-boot + ball flight). Remaining AC: on-device 60fps + zero-GC profiler capture (needs a phone build — pairs with VB-19) | `3b37f79`, `2bd1024` |
+| VB-13..20 | ▶ unblocked — VB-13 (input layer) is next | — |
 | VB-21..23 | ⏳ gate-blocked by design | — |
 
-Suite: **168 EditMode tests green** — `~/.dotnet/dotnet test tools/VG.SimTests/VG.SimTests.csproj`.
+Suite: **168 EditMode tests green via dotnet** (`~/.dotnet/dotnet test tools/VG.SimTests/VG.SimTests.csproj`) and **169 EditMode + 1 PlayMode green in-editor** (Unity `-runTests`). Note: UTF's NUnit has no `Assert.Multiple` — classic asserts only.
 
 **Unticketed work landed:** `MatchSim` composition layer (`Assets/Scripts/Gameplay/Match/`) — full deterministic AI-vs-AI headless matches; implicit prerequisite of VB-11, consumed by VB-12/VB-18. Demo: `~/.dotnet/dotnet run --project tools/VG.SimRunner -c Release -- transcript --tier Normal --seed 42`.
 
