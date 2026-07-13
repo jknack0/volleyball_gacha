@@ -8,8 +8,8 @@ Priorities: `P0` = critical path now · `P1` = M0 scope · `P2` = post-gate.
 
 | Ticket | State | Evidence |
 |---|---|---|
-| VB-1 | ◐ repo hygiene/LFS done; Unity-editor verification pending install | `fdc730a` |
-| VB-2 | ◐ manifest + asmdefs authored; package resolution verifies on first editor open | `fdc730a` |
+| VB-1 | ◐ repo hygiene/LFS done; Unity 6000.0.79f1 + iOS module installed headlessly, version pinned; **remaining: Unity Hub sign-in (license), then first-open verification** | `fdc730a`, `3b37f79` |
+| VB-2 | ◐ manifest + asmdefs authored; package resolution verifies on first licensed open | `fdc730a` |
 | VB-3 | ✅ RNG streams, golden-pinned | `fdc730a` |
 | VB-4 | ✅ window/quality math (constants audited vs §3) | `88ae07b` |
 | VB-5 | ✅ rally state machine, table 1:1 | `88ae07b` |
@@ -19,7 +19,8 @@ Priorities: `P0` = critical path now · `P1` = M0 scope · `P2` = post-gate.
 | VB-9 | ✅ Hype/Ignition + primitives (a)–(f) | `cf65858` |
 | VB-10 | ✅ AI utility/sampling/vocabulary | `cf65858` |
 | VB-11 | ✅ runner (batch/mirror/transcript/sweep/calibrate/economy), JSON reports, skill proxies — all three standing suites operational | `2caac05`+ |
-| VB-12..20 | ⏳ blocked on Unity 6 editor install (user-side) | — |
+| VB-12 | ◐ engine-free 80% done: MatchSim rewritten tick-driven (ball observable per tick, outcomes revealed at physical ticks, CourtSlots shared sim/view); Unity layer staged (`VG.Unity` asmdef + self-bootstrapping `GreyBoxMatch` — press Play in any empty scene); **compile+run verification blocked on license sign-in** | `3b37f79`+ |
+| VB-13..20 | ⏳ blocked on license sign-in → VB-12 verification | — |
 | VB-21..23 | ⏳ gate-blocked by design | — |
 
 Suite: **168 EditMode tests green** — `~/.dotnet/dotnet test tools/VG.SimTests/VG.SimTests.csproj`.

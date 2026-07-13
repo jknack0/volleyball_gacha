@@ -1,0 +1,17 @@
+{
+    "name": "VG.Unity",
+    "rootNamespace": "VG.Unity",
+    "references": [
+        "VG.Data",
+        "VG.Gameplay"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
