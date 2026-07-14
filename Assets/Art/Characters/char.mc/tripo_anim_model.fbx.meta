@@ -23,45 +23,7 @@ ModelImporter:
     removeConstantScaleCurves: 0
     motionNodeName: 
     animationImportErrors: 
-    animationImportWarnings: "\nClip 'Armature.001|tripo:preset:biped:idle|Base Layer_remap'
-      has import animation warnings that might lower retargeting quality:\nNote:
-      Activate translation DOF on avatar to improve retargeting quality.\n\t'tripo::0_Left_Limb_0'
-      is inbetween humanoid transforms and has rotation animation that will be discarded.\n\nClip
-      'Armature.002|tripo:preset:biped:run|Base Layer_remap' has import animation
-      warnings that might lower retargeting quality:\nNote: Activate translation
-      DOF on avatar to improve retargeting quality.\n\t'tripo::0_Left_Limb_0' is
-      inbetween humanoid transforms and has rotation animation that will be discarded.\n\t'tripo::0_Left_Limb_2'
-      is inbetween humanoid transforms and has rotation animation that will be discarded.\n\nClip
-      'Armature.003|tripo:preset:biped:jump|Base Layer_remap' has import animation
-      warnings that might lower retargeting quality:\nNote: Activate translation
-      DOF on avatar to improve retargeting quality.\n\t'tripo::0_Left_Limb_0' is
-      inbetween humanoid transforms and has rotation animation that will be discarded.\n\t'tripo::0_Left_Limb_2'
-      is inbetween humanoid transforms and has rotation animation that will be discarded.\n\nClip
-      'Armature.004|tripo:preset:biped:dive|Base Layer_remap' has import animation
-      warnings that might lower retargeting quality:\nNote: Activate translation
-      DOF on avatar to improve retargeting quality.\n\t'tripo::0_Left_Limb_0' is
-      inbetween humanoid transforms and has rotation animation that will be discarded.\n\t'tripo::0_Left_Limb_2'
-      is inbetween humanoid transforms and has rotation animation that will be discarded.\n\nClip
-      'Armature|Armature.001|tripo:preset:biped:idle|Base Layer_remap' has import
-      animation warnings that might lower retargeting quality:\nNote: Activate translation
-      DOF on avatar to improve retargeting quality.\n\t'tripo::0_Left_Limb_0' is
-      inbetween humanoid transforms and has rotation animation that will be discarded.\n\t'tripo::0_Left_Limb_2'
-      is inbetween humanoid transforms and has rotation animation that will be discarded.\n\nClip
-      'Armature|Armature.002|tripo:preset:biped:run|Base Layer_remap' has import
-      animation warnings that might lower retargeting quality:\nNote: Activate translation
-      DOF on avatar to improve retargeting quality.\n\t'tripo::0_Left_Limb_0' is
-      inbetween humanoid transforms and has rotation animation that will be discarded.\n\t'tripo::0_Left_Limb_2'
-      is inbetween humanoid transforms and has rotation animation that will be discarded.\n\nClip
-      'Armature|Armature.003|tripo:preset:biped:jump|Base Layer_remap' has import
-      animation warnings that might lower retargeting quality:\nNote: Activate translation
-      DOF on avatar to improve retargeting quality.\n\t'tripo::0_Left_Limb_0' is
-      inbetween humanoid transforms and has rotation animation that will be discarded.\n\t'tripo::0_Left_Limb_2'
-      is inbetween humanoid transforms and has rotation animation that will be discarded.\n\nClip
-      'Armature|Armature.004|tripo:preset:biped:dive|Base Layer_remap' has import
-      animation warnings that might lower retargeting quality:\nNote: Activate translation
-      DOF on avatar to improve retargeting quality.\n\t'tripo::0_Left_Limb_0' is
-      inbetween humanoid transforms and has rotation animation that will be discarded.\n\t'tripo::0_Left_Limb_2'
-      is inbetween humanoid transforms and has rotation animation that will be discarded.\n"
+    animationImportWarnings: 
     animationRetargetingWarnings: 
     animationDoRetargetingWarnings: 0
     importAnimatedCustomProperties: 0
@@ -888,7 +850,7 @@ ModelImporter:
     skeletonHasParents: 1
   lastHumanDescriptionAvatarSource: {instanceID: 0}
   autoGenerateAvatarMappingIfUnspecified: 1
-  animationType: 3
+  animationType: 2
   humanoidOversampling: 1
   avatarSetup: 1
   addHumanoidExtraRootOnlyWhenUsingAvatar: 1

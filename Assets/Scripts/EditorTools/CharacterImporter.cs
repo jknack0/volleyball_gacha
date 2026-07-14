@@ -77,14 +77,17 @@ namespace VG.EditorTools
 
         private static void Build(string dir, string charId)
         {
-            // Source split [structural]: Tripo's animate_retarget FBX ships a GARBLED texture —
-            // visuals come from the rigged (or static) FBX, ONLY the clips come from the animated
-            // one (Humanoid retargeting makes clips portable across avatars of the same skeleton).
+            // Source rules [structural], learned the hard way:
+            // - Mesh + skeleton + clips ALL from the animated FBX: clips only bind cleanly on
+            //   their native hierarchy (cross-FBX Generic binding smeared mis-pathed islands;
+            //   Humanoid remap mangled head/feet). Blender UV test confirms retarget keeps UVs.
+            // - Texture NEVER from the animated FBX: Tripo's retarget ships a garbled atlas.
             string animFbx = $"{dir}/tripo_anim_model.fbx";
             string riggedFbx = $"{dir}/tripo_rigged_model.fbx";
             string staticFbx = $"{dir}/tripo_model_model.fbx";
-            string visualPath = File.Exists(riggedFbx) ? riggedFbx : staticFbx;
-            string clipsPath = File.Exists(animFbx) ? animFbx : visualPath;
+            string fallback = File.Exists(riggedFbx) ? riggedFbx : staticFbx;
+            string visualPath = File.Exists(animFbx) ? animFbx : fallback;
+            string clipsPath = visualPath;
             if (!File.Exists(visualPath))
             {
                 Debug.LogWarning($"VG: {charId}: no tripo FBX found, skipping.");
