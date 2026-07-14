@@ -1,0 +1,29 @@
+MC — Hoshino Chihiro (char.mc) — sheet prompt v1
+Per docs/ai-character-pipeline.md §3.1. Style bank locked; character block from docs/story-bible.md §2.
+
+MAIN PROMPT
+anime cel-shaded character turnaround, T-pose, front view + side view + back view,
+full body, flat colors, bold clean lineart, no gradients, no rim light, neutral flat
+lighting, plain white background, 2XKO / modern fighting-game anime proportions,
+sporty volleyball uniform.
+
+Character: Hoshino Chihiro, 16, androgynous high-school volleyball setter — lean,
+compact athletic build, slightly below average height, upright confident posture.
+Sharp, observant amber eyes, calm knowing half-smile. Dark teal-black hair in a
+short practical cut with one unruly forelock, readable as 2-3 solid hair masses.
+Azure blue sleeveless volleyball jersey with white side panels, plain (no number,
+no text), dark navy athletic shorts, azure-and-white court shoes, white ankle
+socks, thin white wristband on the right wrist. Palette limited to 6 flat colors:
+azure blue, white, dark navy, warm skin tone, teal-black hair, amber eyes.
+
+NEGATIVE PROMPT
+gradients, soft shading, rim lighting, painterly texture, photorealism, text,
+logos, jersey numbers, thin props, accessories in hands, dynamic pose, foreshortening,
+background elements, multiple characters, muscular exaggeration
+
+NOTES
+- Landscape 3:2 or 16:9; fall back to single-view + reference-image chaining if the
+  multi-view sheet muddles.
+- Jersey deliberately numberless: #2 painted onto the texture post-import (text smears in image->3D).
+- Scorekeeper pencil gag is VN-portrait-only; thin props shred in mesh generation.
+- Save the accepted sheet as sheet_v1.png beside this file.
