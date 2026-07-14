@@ -15,6 +15,7 @@ import csv
 import datetime
 import json
 import os
+import re
 import time
 import urllib.request
 
@@ -59,7 +60,7 @@ def poll(kind, task_id, label):
 
 
 def image_data_uri(path):
-    """Encode PNG, JPEG, or WebP using the MIME type found in the file bytes."""
+    """Encode a Meshy-supported PNG or JPEG based on its file signature."""
     with open(path, "rb") as handle:
         raw = handle.read()
     if raw.startswith(b"\x89PNG\r\n\x1a\n"):
@@ -67,7 +68,7 @@ def image_data_uri(path):
     elif raw.startswith(b"\xff\xd8\xff"):
         media_type = "image/jpeg"
     elif raw.startswith(b"RIFF") and raw[8:12] == b"WEBP":
-        media_type = "image/webp"
+        raise ValueError(f"Meshy accepts PNG and JPEG inputs; convert WebP before submission: {path}")
     else:
         raise ValueError(f"unsupported image format: {path}")
     encoded = base64.b64encode(raw).decode("ascii")
@@ -85,13 +86,16 @@ def build_mesh_request(view_paths, *, textured=True, target_polycount=15000, pos
         "ai_model": "meshy-6",
         "should_texture": textured,
         "should_remesh": textured,
-        "topology": "triangle",
-        "target_polycount": target_polycount,
         "pose_mode": pose_mode,
-        "remove_lighting": textured,
-        "enable_pbr": False,
         "target_formats": ["glb", "fbx"],
     }
+    if textured:
+        payload.update({
+            "topology": "triangle",
+            "target_polycount": target_polycount,
+            "remove_lighting": True,
+            "enable_pbr": False,
+        })
     if len(images) == 1:
         payload["image_url"] = images[0]
         return "image-to-3d", payload
@@ -116,6 +120,8 @@ def parse_args(argv=None):
     parser.add_argument("--polycount", type=int, default=15000)
     parser.add_argument("--height-meters", type=float, default=1.6)
     args = parser.parse_args(argv)
+    if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]*", args.char_id) or args.char_id in {".", ".."}:
+        parser.error("char_id must be a safe single path component")
     if args.sheet and args.view:
         parser.error("use either the legacy sheet argument or --view, not both")
     args.views = args.view or ([args.sheet] if args.sheet else [])
@@ -123,6 +129,10 @@ def parse_args(argv=None):
         parser.error("provide a sheet or at least one --view")
     if len(args.views) > 4:
         parser.error("Meshy accepts at most four views")
+    if not 100 <= args.polycount <= 300000:
+        parser.error("--polycount must be between 100 and 300000")
+    if args.height_meters <= 0:
+        parser.error("--height-meters must be greater than zero")
     return args
 
 
@@ -143,7 +153,10 @@ def run(args):
         return 0
 
     char_id = args.char_id
-    out_dir = f"Assets/Art/Characters/{char_id}"
+    character_root = os.path.abspath("Assets/Art/Characters")
+    out_dir = os.path.abspath(os.path.join(character_root, char_id))
+    if os.path.commonpath([character_root, out_dir]) != character_root:
+        raise ValueError("character output must remain under Assets/Art/Characters")
     os.makedirs(out_dir, exist_ok=True)
     provenance = []
 
@@ -154,7 +167,16 @@ def run(args):
     tex = (mesh.get("texture_urls") or [{}])[0].get("base_color")
     if tex:
         download(tex, f"{out_dir}/Color.png")
-    provenance.append(("meshy_model.fbx", f"meshy {kind} meshy-6", mesh_id, mesh.get("consumed_credits")))
+    mesh_tool = f"meshy {kind} meshy-6"
+    provenance.append((
+        "meshy_model.fbx",
+        "mesh+texture" if tex else "mesh",
+        mesh_tool,
+        mesh_id,
+        mesh.get("consumed_credits"),
+    ))
+    if tex:
+        provenance.append(("Color.png", "texture", mesh_tool, mesh_id, None))
 
     if args.shape_only:
         append_provenance(char_id, provenance)
@@ -169,12 +191,15 @@ def run(args):
     rig = poll("rigging", rig_id, "rig")
     res = rig["result"]
     download(res["rigged_character_fbx_url"], f"{out_dir}/meshy_rigged.fbx")
+    provenance.append(("meshy_rigged.fbx", "rig", "meshy rigging", rig_id, rig.get("consumed_credits")))
     basic = res.get("basic_animations") or {}
     for name in ("walking", "running"):
         url = basic.get(f"{name}_fbx_url")
         if url:
-            download(url, f"{out_dir}/meshy_anim_{name}.fbx")
-    provenance.append(("meshy_rigged.fbx", "meshy rigging", rig_id, rig.get("consumed_credits")))
+            clip_name = "walk" if name == "walking" else "run"
+            filename = f"meshy_anim_{clip_name}.fbx"
+            download(url, f"{out_dir}/{filename}")
+            provenance.append((filename, "animations", f"meshy rigging basic animation {name}", rig_id, None))
 
     if not args.skip_animations:
         print("3/3 animations ...", flush=True)
@@ -186,7 +211,13 @@ def run(args):
         for name, tid in anim_tasks.items():
             t = poll("animations", tid, f"anim:{name}")
             download(t["result"]["animation_fbx_url"], f"{out_dir}/meshy_anim_{name}.fbx")
-            provenance.append((f"meshy_anim_{name}.fbx", f"meshy animation action_id={ACTIONS[name]}", tid, t.get("consumed_credits")))
+            provenance.append((
+                f"meshy_anim_{name}.fbx",
+                "animations",
+                f"meshy animation action_id={ACTIONS[name]}",
+                tid,
+                t.get("consumed_credits"),
+            ))
 
     append_provenance(char_id, provenance)
 
@@ -198,13 +229,13 @@ def append_provenance(char_id, records):
     with open("docs/art-provenance.csv", "a", newline="") as f:
         writer = csv.writer(f)
         today = datetime.date.today().isoformat()
-        for fname, tool, task_id, credits in records:
+        for fname, kind, tool, task_id, credits in records:
             source_ref = task_id
             if credits is not None:
                 source_ref = f"{task_id}; {credits} credits"
             writer.writerow([
                 f"{char_id}/{fname}",
-                "3d_model" if fname.endswith(".fbx") else "texture",
+                kind,
                 tool,
                 today,
                 source_ref,

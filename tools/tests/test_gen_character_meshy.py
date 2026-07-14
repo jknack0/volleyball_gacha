@@ -25,7 +25,7 @@ class MeshyCharacterGeneratorTests(unittest.TestCase):
 
         self.assertIsNone(module.api_key())
 
-    def test_image_data_uri_uses_file_content_type_not_extension(self):
+    def test_image_data_uri_rejects_webp_before_meshy_submission(self):
         import tempfile
 
         module = load_module()
@@ -33,9 +33,9 @@ class MeshyCharacterGeneratorTests(unittest.TestCase):
             disguised_webp = pathlib.Path(tmp) / "sheet.png"
             disguised_webp.write_bytes(b"RIFF\x04\x00\x00\x00WEBP")
 
-            uri = module.image_data_uri(disguised_webp)
+            with self.assertRaisesRegex(ValueError, "Meshy accepts PNG and JPEG"):
+                module.image_data_uri(disguised_webp)
 
-        self.assertTrue(uri.startswith("data:image/webp;base64,"))
     def test_multi_view_request_uses_meshy_6_multi_image_endpoint(self):
         import tempfile
 
@@ -67,7 +67,8 @@ class MeshyCharacterGeneratorTests(unittest.TestCase):
         self.assertEqual(kind, "image-to-3d")
         self.assertFalse(payload["should_texture"])
         self.assertFalse(payload["should_remesh"])
-        self.assertFalse(payload["remove_lighting"])
+        self.assertNotIn("target_polycount", payload)
+        self.assertNotIn("remove_lighting", payload)
 
     def test_cli_accepts_repeated_views_and_shape_only_dry_run(self):
         module = load_module()
@@ -93,6 +94,20 @@ class MeshyCharacterGeneratorTests(unittest.TestCase):
         self.assertEqual(args.views, ["sheet.png"])
         self.assertEqual(args.pose_mode, "t-pose")
         self.assertFalse(args.shape_only)
+
+    def test_cli_rejects_unsafe_character_ids_and_invalid_numeric_limits(self):
+        module = load_module()
+
+        invalid_commands = [
+            ["../escape", "sheet.png"],
+            ["char.mc/escape", "sheet.png"],
+            ["char.mc", "sheet.png", "--polycount", "99"],
+            ["char.mc", "sheet.png", "--polycount", "300001"],
+            ["char.mc", "sheet.png", "--height-meters", "0"],
+        ]
+        for command in invalid_commands:
+            with self.subTest(command=command), self.assertRaises(SystemExit):
+                module.parse_args(command)
 
     def test_dry_run_needs_no_api_key_and_redacts_embedded_images(self):
         import contextlib
@@ -153,22 +168,86 @@ class MeshyCharacterGeneratorTests(unittest.TestCase):
             try:
                 module.append_provenance(
                     "char.mc",
-                    [("meshy_model.fbx", "meshy multi-image-to-3d meshy-6", "task-1", 20)],
+                    [
+                        (
+                            "meshy_model.fbx",
+                            "mesh+texture",
+                            "meshy multi-image-to-3d meshy-6",
+                            "task-1",
+                            20,
+                        ),
+                        ("meshy_rigged.fbx", "rig", "meshy rigging", "task-2", 5),
+                    ],
                 )
             finally:
                 os.chdir(old_cwd)
 
             with (root / "docs" / "art-provenance.csv").open(newline="") as handle:
-                row = next(csv.reader(handle))
+                rows = list(csv.reader(handle))
 
+        row = rows[0]
+        self.assertEqual(len(rows), 2)
         self.assertEqual(len(row), 7)
         self.assertEqual(
             row[0:3],
-            ["char.mc/meshy_model.fbx", "3d_model", "meshy multi-image-to-3d meshy-6"],
+            ["char.mc/meshy_model.fbx", "mesh+texture", "meshy multi-image-to-3d meshy-6"],
         )
         self.assertEqual(row[4], "task-1; 20 credits")
         self.assertEqual(row[5], "paid-tier commercial")
         self.assertEqual(row[6], "")
+        self.assertEqual(rows[1][0:2], ["char.mc/meshy_rigged.fbx", "rig"])
+
+    def test_live_pipeline_records_all_downloaded_asset_kinds(self):
+        import tempfile
+
+        module = load_module()
+        with tempfile.TemporaryDirectory() as tmp:
+            root = pathlib.Path(tmp)
+            (root / "docs").mkdir()
+            view = root / "front.png"
+            view.write_bytes(b"\x89PNG\r\n\x1a\n")
+            args = module.parse_args(["char.mc", str(view), "--skip-animations"])
+            mesh = {
+                "model_urls": {"fbx": "https://example.invalid/model.fbx"},
+                "texture_urls": [{"base_color": "https://example.invalid/Color.png"}],
+                "consumed_credits": 30,
+            }
+            rig = {
+                "result": {
+                    "rigged_character_fbx_url": "https://example.invalid/rig.fbx",
+                    "basic_animations": {
+                        "walking_fbx_url": "https://example.invalid/walk.fbx",
+                        "running_fbx_url": "https://example.invalid/run.fbx",
+                    },
+                },
+                "consumed_credits": 5,
+            }
+            old_cwd = os.getcwd()
+            os.chdir(tmp)
+            try:
+                with (
+                    mock.patch.object(module, "call", side_effect=[{"result": "mesh-1"}, {"result": "rig-1"}]),
+                    mock.patch.object(module, "poll", side_effect=[mesh, rig]),
+                    mock.patch.object(module, "download"),
+                ):
+                    result = module.run(args)
+            finally:
+                os.chdir(old_cwd)
+
+            with (root / "docs" / "art-provenance.csv").open(newline="") as handle:
+                rows = list(csv.reader(handle))
+
+        self.assertEqual(result, 0)
+        self.assertEqual(
+            [(row[0], row[1]) for row in rows],
+            [
+                ("char.mc/meshy_model.fbx", "mesh+texture"),
+                ("char.mc/Color.png", "texture"),
+                ("char.mc/meshy_rigged.fbx", "rig"),
+                ("char.mc/meshy_anim_walk.fbx", "animations"),
+                ("char.mc/meshy_anim_run.fbx", "animations"),
+            ],
+        )
 
 
 if __name__ == "__main__":
