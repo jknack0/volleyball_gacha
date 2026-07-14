@@ -2,3 +2,8 @@ asset_id,kind,tool,date,source_ref,license_tier,cleanup_hours
 char.mc,mesh+texture,tripo-api,2026-07-13,image_to_model v3.0-20250812 task 99966db3-32ca-48d7-a187-ec46469fcb54 sheet Assets/Art/CharacterSheets/char.mc/sheet_tpose_v2.png,paid-tier,0
 char.mc,rig,tripo-api,2026-07-13,animate_rig v2.5 mixamo task 8090a1b9-d619-4e1d-b903-2ad81ec88ed0,paid-tier,0
 char.mc,animations,tripo-api,2026-07-13,animate_retarget preset:idle+preset:run+preset:jump+preset:dive task 4edae843-6b4d-43b2-a929-5f188abbceeb,paid-tier,0
+char.mc_meshy/meshy_model.fbx,meshy image-to-3d meshy-6,2026-07-13,019f5e6f-ad11-7627-852f-9ed201be2d71,30 credits,paid-tier commercial
+char.mc_meshy/meshy_rigged.fbx,meshy rigging,2026-07-13,019f5e71-bced-78b8-811e-8abaf1652e8b,5 credits,paid-tier commercial
+char.mc_meshy/meshy_anim_idle.fbx,meshy animation action_id=0,2026-07-13,019f5e72-2a45-7696-a384-711a88a919d4,3 credits,paid-tier commercial
+char.mc_meshy/meshy_anim_jump.fbx,meshy animation action_id=382,2026-07-13,019f5e72-2cd6-79a9-8502-6007c2676c9c,3 credits,paid-tier commercial
+char.mc_meshy/meshy_anim_dive.fbx,meshy animation action_id=506,2026-07-13,019f5e72-2ed9-79aa-af76-60def92417cb,3 credits,paid-tier commercial
