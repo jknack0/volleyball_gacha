@@ -179,11 +179,8 @@ namespace VG.Unity
                     Vec3 p = CourtSlots.Position(side, pos, _teamSize);
 
                     // Character prefabs (built by VG/Build Character Prefabs → Resources/VGCharacters)
-                    // replace capsules where they exist. v0 casting: Tripo MC at Home pos 2 (setter),
-                    // Meshy A/B variant at Home pos 3 — same court, judge live side by side.
+                    // replace capsules where they exist. v0 casting: the MC plays Home setter (pos 2).
                     if (side == TeamSide.Home && pos == 2 && TrySpawnCharacter("char.mc", p))
-                        continue;
-                    if (side == TeamSide.Home && pos == 3 && TrySpawnCharacter("char.mc_meshy", p))
                         continue;
 
                     var cap = GameObject.CreatePrimitive(PrimitiveType.Capsule);
