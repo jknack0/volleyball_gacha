@@ -19,35 +19,46 @@ namespace VG.EditorTools
     /// </summary>
     public sealed class CharacterModelPostprocessor : AssetPostprocessor
     {
-        private const string Root = "Assets/Art/Characters/";
+        private const string CharRoot = "Assets/Art/Characters/";
+        private const string AnimRoot = "Assets/Art/Anim/";
 
         private void OnPreprocessModel()
         {
-            if (!assetPath.StartsWith(Root)) return;
+            if (!assetPath.StartsWith(CharRoot) && !assetPath.StartsWith(AnimRoot)) return;
             var importer = (ModelImporter)assetImporter;
-            // Generic, NOT Humanoid [structural]: visual + clip FBXs come from the same Tripo rig
-            // task, so bone names match 1:1 and Generic plays clips exactly as authored. Humanoid's
-            // avatar remap guessed axes wrong on the generated skeleton (backwards head, warped feet).
-            importer.animationType = ModelImporterAnimationType.Generic;
+            // HUMANOID experiment [structural]: the AA_Volleyball mocap bank (Bip01 skeleton) is
+            // consumed via Unity Humanoid retargeting onto the Meshy characters (clean Mixamo bone
+            // names — unlike Tripo's rig, which is why this was Generic before). If a character
+            // avatar mis-maps (backwards head / warped feet), flip CharactersUseHumanoid back.
+            importer.animationType = ModelImporterAnimationType.Human;
             importer.importAnimation = true;
             importer.materialImportMode = ModelImporterMaterialImportMode.None; // we assign VG/Toon ourselves
         }
 
         private void OnPreprocessAnimation()
         {
-            if (!assetPath.StartsWith(Root)) return;
+            if (!assetPath.StartsWith(CharRoot) && !assetPath.StartsWith(AnimRoot)) return;
             var importer = (ModelImporter)assetImporter;
             var clips = importer.defaultClipAnimations;
             foreach (var clip in clips)
             {
+                // Take names arrive exporter-prefixed ("Armature|ready") — keep the tail.
+                int bar = clip.name.LastIndexOf('|');
+                if (bar >= 0) clip.name = clip.name[(bar + 1)..];
+
+                // Loop stances/locomotion; one-shot actions stay clamped.
                 string n = clip.name.ToLowerInvariant();
-                foreach (var key in new[] { "idle", "run", "walk", "jump", "dive" })
-                {
-                    if (!n.Contains(key)) continue;
-                    clip.name = key;
-                    clip.loopTime = key == "idle" || key == "run" || key == "walk";
-                    break;
-                }
+                clip.loopTime = n.Contains("idle") || n.Contains("ready") || n.Contains("posture")
+                    || n.Contains("shuffle") || n.Contains("sprint") || n.Contains("walk")
+                    || n.Contains("run");
+
+                // In-place mocap: keep the character where the game puts her.
+                clip.lockRootPositionXZ = true;
+                clip.lockRootHeightY = true;
+                clip.lockRootRotation = true;
+                clip.keepOriginalPositionY = true;
+                clip.keepOriginalPositionXZ = true;
+                clip.keepOriginalOrientation = true;
             }
             importer.clipAnimations = clips;
         }
@@ -116,15 +127,15 @@ namespace VG.EditorTools
                 m.SetFloat("_UseBakedNormals", 1f); // prep script bakes smoothed normals → vertex color
             });
 
-            // --- animator controller: idle default + every other clip as a state ---
-            // Clips are DUPLICATED into standalone .anim assets with top-level (non-bone) curves
-            // stripped: Blender bakes the Armature/mesh NODE transforms (axis conversion!) into
-            // every take, and Unity double-applies them — twisting/offsetting the character every
-            // frame. Bones live at nested paths ("Armature/Hips/..."); node curves have no '/'.
-            var clips = AssetDatabase.LoadAllAssetRepresentationsAtPath(clipsPath)
+            // --- animator controller: professional mocap bank (Humanoid retarget) ---
+            // Clips come straight from the AA_Volleyball bank FBX: Humanoid = muscle curves,
+            // so the Generic-era node-curve sanitization is unnecessary (and would strip them).
+            // Falls back to the character's own (sanitize-free, Humanoid) clips if no bank.
+            const string BankPath = "Assets/Art/Anim/Volleyball/aa_core.fbx";
+            string clipSource = File.Exists(BankPath) ? BankPath : clipsPath;
+            var clips = AssetDatabase.LoadAllAssetRepresentationsAtPath(clipSource)
                 .OfType<AnimationClip>()
                 .Where(c => !c.name.StartsWith("__preview__"))
-                .Select(c => SanitizeClip(c, dir))
                 .ToList();
             RuntimeAnimatorController controller = null;
             if (clips.Count > 0)
@@ -132,7 +143,7 @@ namespace VG.EditorTools
                 string ctrlPath = $"{dir}/{charId}_anim.controller";
                 AssetDatabase.DeleteAsset(ctrlPath);
                 var ctrl = AnimatorController.CreateAnimatorControllerAtPath(ctrlPath);
-                var ordered = clips.OrderBy(c => c.name == "idle" ? 0 : 1).ToList();
+                var ordered = clips.OrderBy(c => c.name == "ready" ? 0 : c.name == "idle" ? 1 : 2).ToList();
                 foreach (var clip in ordered)
                     ctrl.AddMotion(clip); // first added = default state
                 controller = ctrl;
@@ -148,6 +159,7 @@ namespace VG.EditorTools
                 var animator = instance.GetComponent<Animator>();
                 if (animator == null) animator = instance.AddComponent<Animator>();
                 if (controller != null) animator.runtimeAnimatorController = controller;
+                animator.applyRootMotion = false; // in-place clips; the game owns position
 
                 string prefabPath = $"{dir}/{charId}.prefab";
                 var prefab = PrefabUtility.SaveAsPrefabAsset(instance, prefabPath);
@@ -168,27 +180,6 @@ namespace VG.EditorTools
             {
                 Object.DestroyImmediate(instance);
             }
-        }
-
-        /// <summary>Copy a clip to a standalone asset, dropping curves on top-level nodes.</summary>
-        private static AnimationClip SanitizeClip(AnimationClip src, string dir)
-        {
-            if (!AssetDatabase.IsValidFolder($"{dir}/Clips"))
-                AssetDatabase.CreateFolder(dir, "Clips");
-            string path = $"{dir}/Clips/{src.name}.anim";
-
-            var dst = new AnimationClip { name = src.name, frameRate = src.frameRate };
-            foreach (var b in AnimationUtility.GetCurveBindings(src))
-            {
-                if (!b.path.Contains("/")) continue; // top-level node curve → drop
-                AnimationUtility.SetEditorCurve(dst, b, AnimationUtility.GetEditorCurve(src, b));
-            }
-            var settings = AnimationUtility.GetAnimationClipSettings(src);
-            AnimationUtility.SetAnimationClipSettings(dst, settings);
-
-            AssetDatabase.DeleteAsset(path);
-            AssetDatabase.CreateAsset(dst, path);
-            return dst;
         }
 
         private static Texture2D FindOrExtractTexture(string dir, params string[] fbxPaths)
