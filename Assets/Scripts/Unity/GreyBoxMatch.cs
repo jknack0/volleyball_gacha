@@ -105,12 +105,15 @@ namespace VG.Unity
 
             // One-shot floor re-snap: the spawn-time snap measured the BIND pose; a few frames in,
             // the Animator has posed the character (idle) and skinned bounds are trustworthy.
-            if (_charToSnap != null && --_charSnapCountdown <= 0)
+            if (_charsToSnap.Count > 0 && --_charSnapCountdown <= 0)
             {
-                var b = new Bounds(_charToSnap.position, Vector3.zero);
-                foreach (var r in _charToSnap.GetComponentsInChildren<Renderer>()) b.Encapsulate(r.bounds);
-                _charToSnap.position += Vector3.down * b.min.y;
-                _charToSnap = null;
+                foreach (var t in _charsToSnap)
+                {
+                    var b = new Bounds(t.position, Vector3.zero);
+                    foreach (var r in t.GetComponentsInChildren<Renderer>()) b.Encapsulate(r.bounds);
+                    t.position += Vector3.down * b.min.y;
+                }
+                _charsToSnap.Clear();
             }
 
             var kb = Keyboard.current;
@@ -176,8 +179,11 @@ namespace VG.Unity
                     Vec3 p = CourtSlots.Position(side, pos, _teamSize);
 
                     // Character prefabs (built by VG/Build Character Prefabs → Resources/VGCharacters)
-                    // replace capsules where they exist. v0 casting: the MC plays Home setter (pos 2).
+                    // replace capsules where they exist. v0 casting: Tripo MC at Home pos 2 (setter),
+                    // Meshy A/B variant at Home pos 3 — same court, judge live side by side.
                     if (side == TeamSide.Home && pos == 2 && TrySpawnCharacter("char.mc", p))
+                        continue;
+                    if (side == TeamSide.Home && pos == 3 && TrySpawnCharacter("char.mc_meshy", p))
                         continue;
 
                     var cap = GameObject.CreatePrimitive(PrimitiveType.Capsule);
@@ -233,12 +239,12 @@ namespace VG.Unity
 
             go.transform.position = new Vector3(slot.X, lift, slot.Z);
             go.transform.rotation = Quaternion.LookRotation(slot.Z < 0f ? Vector3.forward : Vector3.back);
-            _charToSnap = go.transform;
+            _charsToSnap.Add(go.transform);
             _charSnapCountdown = 3; // frames until the Animator has evaluated the idle pose [tunable]
             return true;
         }
 
-        private Transform _charToSnap;
+        private readonly System.Collections.Generic.List<Transform> _charsToSnap = new();
         private int _charSnapCountdown;
 
         private void ApplyToon(GameObject go, Color baseColor, bool outline)
