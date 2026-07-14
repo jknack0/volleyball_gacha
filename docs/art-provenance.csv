@@ -1,0 +1,4 @@
+asset_id,kind,tool,date,source_ref,license_tier,cleanup_hours
+char.mc,mesh+texture,tripo-api,2026-07-13,image_to_model v3.0-20250812 task 99966db3-32ca-48d7-a187-ec46469fcb54 sheet Assets/Art/CharacterSheets/char.mc/sheet_tpose_v2.png,paid-tier,0
+char.mc,rig,tripo-api,2026-07-13,animate_rig v2.5 mixamo task 8090a1b9-d619-4e1d-b903-2ad81ec88ed0,paid-tier,0
+char.mc,animations,tripo-api,2026-07-13,animate_retarget preset:idle+preset:run+preset:jump+preset:dive task 4edae843-6b4d-43b2-a929-5f188abbceeb,paid-tier,0
