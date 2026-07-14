@@ -44,7 +44,16 @@ bpy.context.scene.camera = cam
 scene = bpy.context.scene
 scene.render.resolution_x = 768
 scene.render.resolution_y = 1024
-scene.render.engine = "BLENDER_EEVEE_NEXT" if hasattr(bpy.types, "SceneEEVEE") else "BLENDER_EEVEE"
+# Blender renamed Eevee's engine id in 4.x and changed it back in 5.x. Probe the
+# actual enum instead of inferring support from a Python type that still exists.
+for engine in ("BLENDER_EEVEE_NEXT", "BLENDER_EEVEE"):
+    try:
+        scene.render.engine = engine
+        break
+    except TypeError:
+        continue
+else:
+    raise RuntimeError("no supported Eevee render engine found")
 scene.render.film_transparent = False
 world = bpy.data.worlds.new("W")
 world.color = (0.16, 0.15, 0.24)
