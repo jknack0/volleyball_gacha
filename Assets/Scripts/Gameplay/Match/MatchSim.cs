@@ -1,3 +1,4 @@
+using VG.Gameplay.Input;
 using System;
 using VG.Data;
 using VG.Gameplay.Ai;
@@ -28,7 +29,7 @@ namespace VG.Gameplay.Match
     /// no signature spends; §3.5 ctx bypass for AI (spec §6.2 note); slot-standing players
     /// (no movement sim in M0); AI decision ticks are fixed constants [tunable].
     /// </summary>
-    public sealed class MatchSim
+    public sealed partial class MatchSim
     {
         private const int MaxContactsPerRally = 200;  // runaway-rally guard [structural]
         private const int ServeAimDecisionTick = 30;  // AI "release" [tunable v0]
@@ -79,11 +80,12 @@ namespace VG.Gameplay.Match
         private BlockState _blockState;
         private bool _blockDecided;
 
-        public MatchSim(MatchConfig config, PointResolutionTunables pointTunables = null)
+        public MatchSim(MatchConfig config, PointResolutionTunables pointTunables = null, TeamSide? humanSide = null)
         {
             _config = config ?? throw new ArgumentNullException(nameof(config));
             _point = pointTunables ?? new PointResolutionTunables();
             _teamSize = config.TeamSize;
+            HumanSide = humanSide;
             _rng = RngSet.FromMaster(config.MasterSeed);
             _hype = new HypeMeters(_hypeT);
             _result = new MatchResult { Format = config.Format, Seeds = _rng.Seeds };
@@ -141,6 +143,7 @@ namespace VG.Gameplay.Match
         public void Tick()
         {
             if (Done) return;
+            _tick++;
 
             // Match-over intercept: must preempt Rotation's auto-timer (T18 over T17).
             if (_machine.CurrentState == RallyState.Rotation && IsMatchOver())
@@ -157,23 +160,49 @@ namespace VG.Gameplay.Match
             switch (_machine.CurrentState)
             {
                 case RallyState.ServeAim:
-                    if (_machine.TicksInState >= ServeAimDecisionTick) DoServeContact();
+                    if (IsHuman(_serving)) HumanTryServe();       // waits for ServeRelease; T3 timeout is the fallback
+                    else if (_machine.TicksInState >= ServeAimDecisionTick) DoServeContact();
+                    break;
+
+                case RallyState.ServeContact:
+                    // Reached only via T3 timeout (human never released): auto-serve, grade capped Good (§1.2 T3).
+                    if (_plan == FlightPlan.None)
+                    {
+                        var server = AtPosition(_serving, 1);
+                        float statC = StatC(server, StatId.Serve, StatId.Power);
+                        AuthorServe(TimingGrade.Good, QualityMath.Quality(_res, TimingGrade.Good, statC), ZoneId.z_CM, jump: false);
+                    }
                     break;
 
                 case RallyState.SetSelect:
-                    if (_machine.TicksInState >= SetSelectDecisionTick) DoSetChoice();
+                    if (IsHuman(_possession)) HumanTrySetChoice(); // waits for SetChoice; T8 timeout is the fallback
+                    else if (_machine.TicksInState >= SetSelectDecisionTick) DoSetChoice();
                     break;
 
                 case RallyState.BallInFlight:
-                    if (_plan == FlightPlan.SetToAttack)
+                    if (_plan == FlightPlan.None)
+                    {
+                        // Reached only via T8 timeout: auto high-outside, grade capped Good (§1.2 T8).
+                        AuthorSet(SetOption.HighOutside, TimingGrade.Good);
+                    }
+                    else if (_plan == FlightPlan.SetToAttack)
+                    {
                         _machine.Fire(RallyTrigger.SetArcAscending); // T9 — approach runs the set arc
+                    }
                     else
+                    {
                         AdvanceFlight();
+                    }
                     break;
 
                 case RallyState.ReceiveWindow:
-                case RallyState.DigWindow:
+                    if (IsHuman(Other(ThrowerOf(_plan)))) HumanPumpReceiveInputs();
                     AdvanceFlight(); // window is open while the ball completes its arc (T5 note)
+                    break;
+
+                case RallyState.DigWindow:
+                    if (IsHuman(Other(_possession))) HumanPumpReceiveInputs();
+                    AdvanceFlight();
                     break;
 
                 case RallyState.AttackApproach:
@@ -189,6 +218,7 @@ namespace VG.Gameplay.Match
         private void OnStateEntered(RallyState entered, RallyState previous)
         {
             OnStateChanged?.Invoke(entered, previous);
+            HumanOnStateEntered(entered);
             switch (entered)
             {
                 case RallyState.PreServe:
@@ -251,11 +281,18 @@ namespace VG.Gameplay.Match
             float statC = StatC(server, StatId.Serve, StatId.Power);
             float q = QualityMath.Quality(_res, grade, statC);
             if (jumpServe) q = Math.Min(1f, q + 0.15f); // §4.2 [tunable]
+
+            AuthorServe(grade, q, target, jumpServe);
+        }
+
+        /// <summary>Shared serve authoring (AI decision, human release, or T3 auto-serve). Fires T4.</summary>
+        private void AuthorServe(TimingGrade grade, float q, ZoneId target, bool jump)
+        {
             RecordContact(grade, q, _serving);
 
-            Vec3 launch = CourtSlots.ServeLaunch(_serving, jumpServe ? 2.1f : 2.0f, _teamSize);
+            Vec3 launch = CourtSlots.ServeLaunch(_serving, jump ? 2.1f : 2.0f, _teamSize);
             Vec3 end = AimPoint(Other(_serving), target, q);
-            TrajectoryParams p = jumpServe
+            TrajectoryParams p = jump
                 ? _ball.ServeJump(launch, end)
                 : _ball.ServeFloat(launch, end, RallyRng.NextFloat01() * 6.2831853f); // §2.3 ⚄
 
@@ -271,23 +308,32 @@ namespace VG.Gameplay.Match
         private ZoneId _pendingServeTarget;
         private float _pendingServeQuality;
         private TimingGrade _pendingServeGrade;
+        private ZoneId _pendingAim;
 
         // ---- set → attack ----------------------------------------------------------------------------
 
         private void DoSetChoice()
         {
             SetOption option = ChooseSetOption(_possession, _receiveGrade, _log.Contacts);
-            var setter = AtPosition(_possession, 2); // [tunable v0: setter plays right-front]
             TimingGrade grade = SampleGrade(_possession);
+            AuthorSet(option, grade);
+            _machine.Fire(RallyTrigger.LaneChosen); // T8 → BallInFlight; T9 fires next tick
+        }
+
+        /// <summary>Shared set authoring (AI, human choice, or T8 auto-set). §3.4 cap applied here. Fires nothing.</summary>
+        private void AuthorSet(SetOption option, TimingGrade grade)
+        {
             if (Cascade.CapsSetGradeAtGood(_receiveGrade) && grade > TimingGrade.Good)
                 grade = TimingGrade.Good; // §3.4 Shank cap
+            _lastSetGrade = grade;       // §3.5 ctx for a HUMAN spike downstream
+
+            var setter = AtPosition(_possession, 2); // [tunable v0: setter plays right-front]
             float q = QualityMath.Quality(_res, grade, setter.Stats.Normalized(StatId.Technique));
             RecordContact(grade, q, _possession);
 
             // §3.5: a Miss set is a free ball over — author it and flip possession at landing.
             if (!Cascade.TryGetSpikeWindowCtx(_cascade, grade, out _))
             {
-                _machine.Fire(RallyTrigger.LaneChosen); // T8 → BallInFlight
                 BeginFreeBall(_possession, CourtSlots.Position(_possession, 2, _teamSize));
                 return;
             }
@@ -299,7 +345,6 @@ namespace VG.Gameplay.Match
             Vec3 end = new Vec3(attackerSlot.X, 2.0f, attackerSlot.Z);
             TrajectoryParams p = option == SetOption.QuickMiddle ? _ball.SetQuick(start, end) : _ball.SetHigh(start, end);
 
-            _machine.Fire(RallyTrigger.LaneChosen); // T8 → BallInFlight; T9 fires next tick
             BeginFlight(FlightPlan.SetToAttack, p);
         }
 
@@ -314,16 +359,28 @@ namespace VG.Gameplay.Match
                 _blockState = ChooseBlock(Other(_possession), _pendingOption);
             }
 
+            if (IsHuman(_possession)) HumanPumpSpikeTap(); // §7.2 buffered apex tap
+
             if (_arcTick >= _arc.DurationTicks)
                 DoAttackContact(); // apex reached
         }
 
         private void DoAttackContact()
         {
-            _machine.Fire(RallyTrigger.AttackTapped); // T10 → AttackContact (instantaneous)
+            bool human = IsHuman(_possession);
+            TimingGrade grade;
+            if (human)
+            {
+                _machine.Fire(_spikeTapTaken ? RallyTrigger.AttackTapped : RallyTrigger.ApexPassed); // T10
+                grade = _spikeTapTaken ? _humanSpikeGrade : TimingGrade.Miss;
+            }
+            else
+            {
+                _machine.Fire(RallyTrigger.AttackTapped); // T10 → AttackContact (instantaneous)
+                grade = SampleGrade(_possession);
+            }
 
             var attacker = AtPosition(_possession, Formation.AttackerFor(_teamSize, _pendingOption));
-            TimingGrade grade = SampleGrade(_possession);
             float q = QualityMath.Quality(_res, grade, StatC(attacker, StatId.Power, StatId.Jump));
             RecordContact(grade, q, _possession);
 
@@ -335,16 +392,28 @@ namespace VG.Gameplay.Match
                 return;
             }
 
-            ZoneId aim = ChooseSpikeAim(_possession, _pendingOption, _log.Contacts);
+            int lane = _pendingOption == SetOption.HighOutside ? 0 : 1; // [tunable v0]
+            ZoneId aim = human
+                ? SpikeSwipeMapper.TargetZone(_humanSpikeShot, lane)    // §4.3 swipe→shot→zone
+                : ChooseSpikeAim(_possession, _pendingOption, _log.Contacts);
+            _pendingAim = aim;
             var slot = AttackerSlot(_possession, _pendingOption);
             Vec3 start = new Vec3(slot.X, _ball.SpikeContactHeight(attacker.Stats.Normalized(StatId.Jump)), slot.Z);
             Vec3 end = AimPoint(Other(_possession), aim, q);
 
             // Pre-evaluate §3.6 (pure, deterministic); reveal at the physically-correct tick.
-            var digger = ReceiverFor(Other(_possession), aim);
-            _pendingDigGrade = SampleGrade(Other(_possession));
-            _pendingDigQuality = QualityMath.Quality(_res, _pendingDigGrade, StatC(digger, StatId.Receive, StatId.Speed));
-            _pendingRes = PointResolution.ResolveAttack(_point, _res, q, grade, aim, _blockState, _pendingDigQuality);
+            // Human DEFENDER: the dig is unknowable until the tap — defer step 7 to landing (digQuality −1).
+            if (IsHuman(Other(_possession)))
+            {
+                _pendingRes = PointResolution.ResolveAttack(_point, _res, q, grade, aim, _blockState, -1f);
+            }
+            else
+            {
+                var digger = ReceiverFor(Other(_possession), aim);
+                _pendingDigGrade = SampleGrade(Other(_possession));
+                _pendingDigQuality = QualityMath.Quality(_res, _pendingDigGrade, StatC(digger, StatId.Receive, StatId.Speed));
+                _pendingRes = PointResolution.ResolveAttack(_point, _res, q, grade, aim, _blockState, _pendingDigQuality);
+            }
 
             BeginFlight(FlightPlan.Spike, _ball.Spike(start, end, q));
             _machine.Fire(RallyTrigger.TrajectoryAuthored); // T12 → BallInFlight (block resolves with it)
@@ -446,12 +515,18 @@ namespace VG.Gameplay.Match
                     break;
 
                 case FlightPlan.Spike:
+                    if (_pendingRes.Outcome == AttackOutcome.Out)
+                    {
+                        TerminalFromFlight(RallyOutcome.Out, winner: Other(_possession), errorBy: _possession);
+                        break;
+                    }
+                    if (IsHuman(Other(_possession)))
+                    {
+                        HumanResolveDigAtLanding(); // deferred §3.6 step 7 — dig graded by the player's tap
+                        break;
+                    }
                     switch (_pendingRes.Outcome)
                     {
-                        case AttackOutcome.Out:
-                            TerminalFromFlight(RallyOutcome.Out, winner: Other(_possession), errorBy: _possession);
-                            break;
-
                         case AttackOutcome.Dug:
                             RecordContact(_pendingDigGrade, _pendingDigQuality, Other(_possession));
                             if (_pendingRes.EffectiveAttack >= _hypeT.BigSpikeAThreshold)
@@ -480,9 +555,27 @@ namespace VG.Gameplay.Match
         {
             TeamSide receiving = Other(_serving);
             var receiver = ReceiverFor(receiving, _pendingServeTarget);
-            TimingGrade grade = SampleGrade(receiving);
-            float q = QualityMath.Quality(_res, grade, StatC(receiver, StatId.Receive, StatId.Speed));
-            RecordContact(grade, q, receiving);
+            TimingGrade grade;
+            float q;
+            if (IsHuman(receiving))
+            {
+                q = HumanEvaluateReceive(receiver, _tick, out grade);
+                if (q < 0f) // §3.3: no commit at all ⇒ ace
+                {
+                    _hype.Apply(HypeEvent.Ace, _serving);
+                    _log.Outcome = RallyOutcome.Kill;
+                    _log.WonByHome = _serving == TeamSide.Home;
+                    _machine.Fire(RallyTrigger.ReceiveFailed); // T7
+                    return;
+                }
+                RecordContact(grade, q, receiving);
+            }
+            else
+            {
+                grade = SampleGrade(receiving);
+                q = QualityMath.Quality(_res, grade, StatC(receiver, StatId.Receive, StatId.Speed));
+                RecordContact(grade, q, receiving);
+            }
 
             var res = PointResolution.ResolveServe(_point, _res, _pendingServeQuality, _pendingServeGrade, _pendingServeTarget, q);
             var display = QualityMath.ReceiveGradeOf(_res, q);
@@ -516,9 +609,20 @@ namespace VG.Gameplay.Match
         {
             TeamSide receiving = Other(ThrowerOf(FlightPlan.FreeBall));
             var receiver = AtPosition(receiving, Formation.FreeBallReceiver(_teamSize)); // free balls target mid-court (§2.3)
-            TimingGrade grade = SampleGrade(receiving);
-            float q = QualityMath.Quality(_res, grade, StatC(receiver, StatId.Receive, StatId.Speed));
-            RecordContact(grade, q, receiving);
+            TimingGrade grade;
+            float q;
+            if (IsHuman(receiving))
+            {
+                q = HumanEvaluateReceive(receiver, _tick, out grade);
+                if (q < 0f) q = 0f; // no commit on a free ball = flubbed — unplayable path below
+                RecordContact(grade, q, receiving);
+            }
+            else
+            {
+                grade = SampleGrade(receiving);
+                q = QualityMath.Quality(_res, grade, StatC(receiver, StatId.Receive, StatId.Speed));
+                RecordContact(grade, q, receiving);
+            }
 
             var display = QualityMath.ReceiveGradeOf(_res, q);
             if (display == ReceiveGrade.Shank && q < _res.ShankPlayableMin)

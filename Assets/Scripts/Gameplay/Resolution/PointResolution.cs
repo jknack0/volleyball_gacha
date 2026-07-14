@@ -148,6 +148,10 @@ namespace VG.Gameplay.Resolution
         /// <summary>§4.1: the 8 non-center zones are edge zones.</summary>
         public static bool IsEdgeZone(ZoneId zone) => zone != ZoneId.z_CM;
 
+        /// <summary>Step-7 dig requirement for an effective attack — exposed for deferred human digs (§3.6).</summary>
+        public static float DigRequirement(PointResolutionTunables t, float effectiveAttack)
+            => t.DigBase + t.DigPerAEff * effectiveAttack;
+
         /// <summary>Block strength B = q_b × match(z) with §3.6 commit modifiers.</summary>
         public static float BlockStrength(PointResolutionTunables t, in BlockState block, ZoneId aimZone)
         {

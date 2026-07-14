@@ -20,10 +20,11 @@ Priorities: `P0` = critical path now · `P1` = M0 scope · `P2` = post-gate.
 | VB-10 | ✅ AI utility/sampling/vocabulary | `cf65858` |
 | VB-11 | ✅ runner (batch/mirror/transcript/sweep/calibrate/economy), JSON reports, skill proxies — all three standing suites operational | `2caac05`+ |
 | VB-12 | ◐ tick engine + grey-box view VERIFIED in-editor (PlayMode smoke: self-boot + ball flight). Remaining AC: on-device 60fps + zero-GC profiler capture (needs a phone build — pairs with VB-19) | `3b37f79`, `2bd1024` |
-| VB-13..20 | ▶ unblocked — VB-13 (input layer) is next | — |
+| VB-13 | ◐ engine-free core COMPLETE: §7.1 gesture grammar + §7.3 forgiveness, §4.3 swipe→shot with boundary safety, quantized PlayerInput replay events, human side in MatchSim (serve meter, receive commit+tap, set choice, spike with §3.5 ctx, deferred dig) through REAL windows + §7.4 assist; **replay-identity AC green** ((seed+input log) ⇒ bit-identical). Remaining: Unity touch binding + on-device checklist (lands with VB-14) | — |
+| VB-14..20 | ▶ VB-14 (touch binding + timing-ring UX = the playable demo) is next | — |
 | VB-21..23 | ⏳ gate-blocked by design | — |
 
-Suite: **168 EditMode tests green via dotnet** (`~/.dotnet/dotnet test tools/VG.SimTests/VG.SimTests.csproj`) and **169 EditMode + 1 PlayMode green in-editor** (Unity `-runTests`). Note: UTF's NUnit has no `Assert.Multiple` — classic asserts only.
+Suite: **188 EditMode tests green via dotnet** (`~/.dotnet/dotnet test tools/VG.SimTests/VG.SimTests.csproj`); in-editor suites re-run at each Unity-side change. Note: UTF's NUnit has no `Assert.Multiple` — classic asserts only.
 
 **Unticketed work landed:** `MatchSim` composition layer (`Assets/Scripts/Gameplay/Match/`) — full deterministic AI-vs-AI headless matches; implicit prerequisite of VB-11, consumed by VB-12/VB-18. Demo: `~/.dotnet/dotnet run --project tools/VG.SimRunner -c Release -- transcript --tier Normal --seed 42`.
 
