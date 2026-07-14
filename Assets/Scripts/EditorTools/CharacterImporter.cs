@@ -113,6 +113,7 @@ namespace VG.EditorTools
             var ink = LoadOrCreateMaterial($"{dir}/{charId}_ink.mat", "VG/Outline", m =>
             {
                 m.SetFloat("_OutlineWidth", 0.02f); // character-scale ink [tunable]
+                m.SetFloat("_UseBakedNormals", 1f); // prep script bakes smoothed normals → vertex color
             });
 
             // --- animator controller: idle default + every other clip as a state ---

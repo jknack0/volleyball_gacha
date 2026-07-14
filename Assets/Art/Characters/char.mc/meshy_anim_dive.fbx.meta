@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: 3dd31575a43ef43859974b34bf3fe4ca
+guid: 346a22b15977b4cf2a48a921cc52afd7
 ModelImporter:
   serializedVersion: 24000
   internalIDToNameTable: []
@@ -32,18 +32,18 @@ ModelImporter:
     extraUserProperties: []
     clipAnimations:
     - serializedVersion: 16
-      name: walk
-      takeName: Armature|Armature|walking_man|baselayer
-      internalID: -2901233246522174405
+      name: dive
+      takeName: Armature|Armature|Dive_Down_and_Land|baselayer
+      internalID: -6356426256427732930
       firstFrame: 0
-      lastFrame: 31
+      lastFrame: 48
       wrapMode: 0
       orientationOffsetY: 0
       level: 0
       cycleOffset: 0
       loop: 0
       hasAdditiveReferencePose: 0
-      loopTime: 1
+      loopTime: 0
       loopBlend: 0
       loopBlendOrientation: 0
       loopBlendPositionY: 0

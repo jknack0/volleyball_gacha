@@ -81,6 +81,26 @@ for o in list(bpy.data.objects):
 
 print(f"meshes kept: {[m.name for m in bpy.data.objects if m.type == 'MESH']}")
 
+# Bake SMOOTHED normals into vertex color (xyz*0.5+0.5) for the ink hull:
+# hard/split normals tear an inverted-hull outline apart. Average loop normals
+# across co-located vertices so the hull stays welded at UV/normal seams.
+from collections import defaultdict
+from mathutils import Vector
+
+for m in (o for o in bpy.data.objects if o.type == "MESH"):
+    me = m.data
+    acc = defaultdict(lambda: Vector((0.0, 0.0, 0.0)))
+    for loop in me.loops:
+        key = tuple(round(c, 4) for c in me.vertices[loop.vertex_index].co)
+        acc[key] += loop.normal
+    col = me.color_attributes.get("OutlineN") or me.color_attributes.new(
+        "OutlineN", type="BYTE_COLOR", domain="CORNER")
+    for i, loop in enumerate(me.loops):
+        key = tuple(round(c, 4) for c in me.vertices[loop.vertex_index].co)
+        n = acc[key].normalized()
+        col.data[i].color = (n.x * 0.5 + 0.5, n.y * 0.5 + 0.5, n.z * 0.5 + 0.5, 1.0)
+    print(f"baked OutlineN for {m.name} ({len(me.loops)} loops)")
+
 if keep.animation_data is None:
     keep.animation_data_create()
 
