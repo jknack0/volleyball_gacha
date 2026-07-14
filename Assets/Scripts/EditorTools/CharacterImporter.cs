@@ -74,17 +74,22 @@ namespace VG.EditorTools
 
         private static void Build(string dir, string charId)
         {
+            // Source split [structural]: Tripo's animate_retarget FBX ships a GARBLED texture —
+            // visuals come from the rigged (or static) FBX, ONLY the clips come from the animated
+            // one (Humanoid retargeting makes clips portable across avatars of the same skeleton).
             string animFbx = $"{dir}/tripo_anim_model.fbx";
+            string riggedFbx = $"{dir}/tripo_rigged_model.fbx";
             string staticFbx = $"{dir}/tripo_model_model.fbx";
-            string modelPath = File.Exists(animFbx) ? animFbx : staticFbx;
-            if (!File.Exists(modelPath))
+            string visualPath = File.Exists(riggedFbx) ? riggedFbx : staticFbx;
+            string clipsPath = File.Exists(animFbx) ? animFbx : visualPath;
+            if (!File.Exists(visualPath))
             {
                 Debug.LogWarning($"VG: {charId}: no tripo FBX found, skipping.");
                 return;
             }
 
-            // --- texture atlas: extract from whichever FBX carries it (animated often doesn't) ---
-            Texture2D atlas = FindOrExtractTexture(dir, animFbx, staticFbx);
+            // --- texture atlas: NEVER from the animated FBX (garbled) ---
+            Texture2D atlas = FindOrExtractTexture(dir, staticFbx, riggedFbx);
 
             // --- materials (idempotent: reuse if present) ---
             var toon = LoadOrCreateMaterial($"{dir}/{charId}_toon.mat", "VG/Toon", m =>
@@ -98,7 +103,7 @@ namespace VG.EditorTools
             });
 
             // --- animator controller: idle default + every other clip as a state ---
-            var clips = AssetDatabase.LoadAllAssetRepresentationsAtPath(modelPath)
+            var clips = AssetDatabase.LoadAllAssetRepresentationsAtPath(clipsPath)
                 .OfType<AnimationClip>()
                 .Where(c => !c.name.StartsWith("__preview__"))
                 .ToList();
@@ -115,7 +120,7 @@ namespace VG.EditorTools
             }
 
             // --- prefab: instantiate, wire materials + controller, save ---
-            var model = AssetDatabase.LoadAssetAtPath<GameObject>(modelPath);
+            var model = AssetDatabase.LoadAssetAtPath<GameObject>(visualPath);
             var instance = (GameObject)PrefabUtility.InstantiatePrefab(model);
             try
             {
