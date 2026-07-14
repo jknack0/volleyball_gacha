@@ -2,7 +2,9 @@
 
 Purpose: replace commissioned 3D character models for the MC + R/SR cast with an AI generation pipeline; keep human commissions as the fallback for the 4 SSR banner faces ("hero asset" rule). Companion to `docs/art-budget.md` (whose character line this collapses ~80–90% if the spike passes) and `docs/story-bible.md` (whose descriptions drive the prompts).
 
-Status: **UNPROVEN until the MC spike (§2) passes.** Do not batch-generate the cast before the gate.
+Status: **MECHANICALLY PROVEN, quality gate PENDING** (spike run 2026-07-13, zero-key route). Do not batch-generate the cast before the gate passes.
+
+**Spike log (zero-key, no accounts):** FLUX.1-schnell public space generated the MC sheet in 10 s (3 consistent views, style-bank compliant, but relaxed arms instead of T-pose). TripoSR public space produced a 36.7k-tri GLB from the front crop in 5.6 s; headless Blender converted to FBX + rendered previews. Verdicts vs the §2 rubric: silhouette PASS (recognizably the character); arms half-merged into torso — FAIL, caused by the non-T-pose sheet (regenerate with harder pose constraints); color arrives as VERTEX COLORS not a texture atlas (TripoSR has no texturing) — either bake to atlas in Blender, add a 5-line vertex-color variant of VG/Toon, or use a texturing generator (paid Tripo/Meshy, or Hunyuan3D when its space recovers — its texture endpoint was erroring; SF3D anonymous-quota-walled). Tri count over the 15k budget — add a decimate step to tools/blender_convert.py. Public-space flakiness confirms the doc's position: paid Tripo/Meshy key = the production route; the zero-key chain is the free prototyping fallback.
 
 ---
 
