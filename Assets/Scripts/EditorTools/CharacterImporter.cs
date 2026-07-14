@@ -128,7 +128,17 @@ namespace VG.EditorTools
 
                 string prefabPath = $"{dir}/{charId}.prefab";
                 var prefab = PrefabUtility.SaveAsPrefabAsset(instance, prefabPath);
-                Debug.Log($"VG: built {prefabPath} (atlas: {(atlas ? atlas.name : "none")}, clips: {clips.Count})");
+
+                // Runtime copy: GreyBoxMatch spawns characters via Resources.Load("VGCharacters/<id>").
+                if (!AssetDatabase.IsValidFolder("Assets/Resources"))
+                    AssetDatabase.CreateFolder("Assets", "Resources");
+                if (!AssetDatabase.IsValidFolder("Assets/Resources/VGCharacters"))
+                    AssetDatabase.CreateFolder("Assets/Resources", "VGCharacters");
+                string runtimePath = $"Assets/Resources/VGCharacters/{charId}.prefab";
+                AssetDatabase.DeleteAsset(runtimePath);
+                AssetDatabase.CopyAsset(prefabPath, runtimePath);
+
+                Debug.Log($"VG: built {prefabPath} (+ Resources copy) (atlas: {(atlas ? atlas.name : "none")}, clips: {clips.Count})");
                 EditorGUIUtility.PingObject(prefab);
             }
             finally

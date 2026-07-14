@@ -163,9 +163,15 @@ namespace VG.Unity
             {
                 for (int pos = 1; pos <= _teamSize; pos++)
                 {
+                    Vec3 p = CourtSlots.Position(side, pos, _teamSize);
+
+                    // Character prefabs (built by VG/Build Character Prefabs → Resources/VGCharacters)
+                    // replace capsules where they exist. v0 casting: the MC plays Home setter (pos 2).
+                    if (side == TeamSide.Home && pos == 2 && TrySpawnCharacter("char.mc", p))
+                        continue;
+
                     var cap = GameObject.CreatePrimitive(PrimitiveType.Capsule);
                     cap.name = $"{side}_{pos}";
-                    Vec3 p = CourtSlots.Position(side, pos, _teamSize);
                     cap.transform.position = new Vector3(p.X, 1f, p.Z);
                     ApplyToon(cap, side == TeamSide.Home ? HomeColor : AwayColor, outline: true);
                 }
@@ -189,6 +195,31 @@ namespace VG.Unity
                 new[] { new GradientColorKey(new Color(1f, 0.95f, 0.5f), 0f), new GradientColorKey(BallColor, 1f) },
                 new[] { new GradientAlphaKey(0.85f, 0f), new GradientAlphaKey(0f, 1f) });
             trail.colorGradient = grad;
+        }
+
+        /// <summary>Spawn a built character at a slot, normalized to human height, facing the net.</summary>
+        private bool TrySpawnCharacter(string charId, Vec3 slot)
+        {
+            var prefab = Resources.Load<GameObject>($"VGCharacters/{charId}");
+            if (prefab == null) return false;
+
+            var go = Instantiate(prefab);
+            go.name = charId;
+
+            // Normalize to ~1.75 m regardless of the generator's export scale [tunable].
+            var bounds = new Bounds(go.transform.position, Vector3.zero);
+            foreach (var r in go.GetComponentsInChildren<Renderer>()) bounds.Encapsulate(r.bounds);
+            float height = Mathf.Max(bounds.size.y, 1e-4f);
+            go.transform.localScale *= 1.75f / height;
+
+            // Feet on the floor: re-measure after scaling and lift by the bounds' bottom offset.
+            var scaled = new Bounds(go.transform.position, Vector3.zero);
+            foreach (var r in go.GetComponentsInChildren<Renderer>()) scaled.Encapsulate(r.bounds);
+            float lift = go.transform.position.y - scaled.min.y;
+
+            go.transform.position = new Vector3(slot.X, lift, slot.Z);
+            go.transform.rotation = Quaternion.LookRotation(slot.Z < 0f ? Vector3.forward : Vector3.back);
+            return true;
         }
 
         private void ApplyToon(GameObject go, Color baseColor, bool outline)
