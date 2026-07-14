@@ -5,7 +5,8 @@ Shader "VG/Toon"
 {
     Properties
     {
-        _BaseColor("Base Color", Color) = (1, 1, 1, 1)
+        [MainTexture] _BaseMap("Albedo (flat colors)", 2D) = "white" {}
+        [MainColor] _BaseColor("Base Color (tint)", Color) = (1, 1, 1, 1)
         _ShadowTint("Shadow Tint (hue-shifted)", Color) = (0.45, 0.38, 0.62, 1)
         _Bands("Shade Bands", Range(1, 4)) = 2
         _MidPoint("Terminator Position", Range(0.05, 0.95)) = 0.5
@@ -33,6 +34,7 @@ Shader "VG/Toon"
             {
                 float4 positionOS : POSITION;
                 float3 normalOS   : NORMAL;
+                float2 uv         : TEXCOORD0;
             };
 
             struct Varyings
@@ -40,9 +42,14 @@ Shader "VG/Toon"
                 float4 positionHCS : SV_POSITION;
                 float3 normalWS    : TEXCOORD0;
                 float3 positionWS  : TEXCOORD1;
+                float2 uv          : TEXCOORD2;
             };
 
+            TEXTURE2D(_BaseMap);
+            SAMPLER(sampler_BaseMap);
+
             CBUFFER_START(UnityPerMaterial)
+                float4 _BaseMap_ST;
                 half4 _BaseColor;
                 half4 _ShadowTint;
                 half _Bands;
@@ -59,6 +66,7 @@ Shader "VG/Toon"
                 OUT.positionWS = TransformObjectToWorld(IN.positionOS.xyz);
                 OUT.positionHCS = TransformWorldToHClip(OUT.positionWS);
                 OUT.normalWS = TransformObjectToWorldNormal(IN.normalOS);
+                OUT.uv = TRANSFORM_TEX(IN.uv, _BaseMap);
                 return OUT;
             }
 
@@ -66,6 +74,7 @@ Shader "VG/Toon"
             {
                 Light mainLight = GetMainLight();
                 half3 n = normalize(IN.normalWS);
+                half3 albedo = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, IN.uv).rgb * _BaseColor.rgb;
 
                 // Hard-banded lambert: shift by the terminator, quantize into _Bands steps.
                 half ndl = saturate(dot(n, mainLight.direction));
@@ -73,14 +82,14 @@ Shader "VG/Toon"
                 half band = floor(shifted * _Bands) / max(_Bands - 1.0h, 1.0h);
                 band = saturate(band);
 
-                half3 shadowCol = _BaseColor.rgb * _ShadowTint.rgb;
-                half3 lit = lerp(shadowCol, _BaseColor.rgb, band) * mainLight.color;
+                half3 shadowCol = albedo * _ShadowTint.rgb;
+                half3 lit = lerp(shadowCol, albedo, band) * mainLight.color;
 
                 // Rim: bright edge falloff (the character-pop light).
                 half3 viewDir = normalize(GetWorldSpaceViewDir(IN.positionWS));
                 half rim = pow(1.0h - saturate(dot(n, viewDir)), _RimPower) * _RimStrength;
 
-                half3 col = lit + rim * _RimColor.rgb + _BaseColor.rgb * _Ambient;
+                half3 col = lit + rim * _RimColor.rgb + albedo * _Ambient;
                 return half4(col, 1);
             }
             ENDHLSL
