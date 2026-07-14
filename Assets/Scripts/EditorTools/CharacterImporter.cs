@@ -116,9 +116,14 @@ namespace VG.EditorTools
             });
 
             // --- animator controller: idle default + every other clip as a state ---
+            // Clips are DUPLICATED into standalone .anim assets with top-level (non-bone) curves
+            // stripped: Blender bakes the Armature/mesh NODE transforms (axis conversion!) into
+            // every take, and Unity double-applies them — twisting/offsetting the character every
+            // frame. Bones live at nested paths ("Armature/Hips/..."); node curves have no '/'.
             var clips = AssetDatabase.LoadAllAssetRepresentationsAtPath(clipsPath)
                 .OfType<AnimationClip>()
                 .Where(c => !c.name.StartsWith("__preview__"))
+                .Select(c => SanitizeClip(c, dir))
                 .ToList();
             RuntimeAnimatorController controller = null;
             if (clips.Count > 0)
@@ -131,7 +136,6 @@ namespace VG.EditorTools
                     ctrl.AddMotion(clip); // first added = default state
                 controller = ctrl;
             }
-
             // --- prefab: instantiate, wire materials + controller, save ---
             var model = AssetDatabase.LoadAssetAtPath<GameObject>(visualPath);
             var instance = (GameObject)PrefabUtility.InstantiatePrefab(model);
@@ -163,6 +167,27 @@ namespace VG.EditorTools
             {
                 Object.DestroyImmediate(instance);
             }
+        }
+
+        /// <summary>Copy a clip to a standalone asset, dropping curves on top-level nodes.</summary>
+        private static AnimationClip SanitizeClip(AnimationClip src, string dir)
+        {
+            if (!AssetDatabase.IsValidFolder($"{dir}/Clips"))
+                AssetDatabase.CreateFolder(dir, "Clips");
+            string path = $"{dir}/Clips/{src.name}.anim";
+
+            var dst = new AnimationClip { name = src.name, frameRate = src.frameRate };
+            foreach (var b in AnimationUtility.GetCurveBindings(src))
+            {
+                if (!b.path.Contains("/")) continue; // top-level node curve → drop
+                AnimationUtility.SetEditorCurve(dst, b, AnimationUtility.GetEditorCurve(src, b));
+            }
+            var settings = AnimationUtility.GetAnimationClipSettings(src);
+            AnimationUtility.SetAnimationClipSettings(dst, settings);
+
+            AssetDatabase.DeleteAsset(path);
+            AssetDatabase.CreateAsset(dst, path);
+            return dst;
         }
 
         private static Texture2D FindOrExtractTexture(string dir, params string[] fbxPaths)

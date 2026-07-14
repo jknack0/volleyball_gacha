@@ -28,6 +28,11 @@ for act in list(bpy.data.actions):
     seen.add(name)
     act.name = name
     act.use_fake_user = True  # survive object deletion
+    # Strip OBJECT-level curves (location/rotation_euler/scale on the Armature node):
+    # they bake Blender's axis conversion as animation, which Unity double-applies —
+    # twisting/offsetting the whole character every frame. Clips must drive BONES only.
+    for fc in [f for f in act.fcurves if not f.data_path.startswith("pose.bones")]:
+        act.fcurves.remove(fc)
 print(f"actions kept: {sorted(seen)}")
 
 # Delete every armature copy but the first, plus all meshes not skinned to it.
