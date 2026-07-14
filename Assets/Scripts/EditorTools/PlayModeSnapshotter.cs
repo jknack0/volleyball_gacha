@@ -25,7 +25,7 @@ namespace VG.EditorTools
             if (!EditorApplication.isPlaying || EditorApplication.isPaused) return;
             if (EditorApplication.timeSinceStartup < _next) return;
             _next = EditorApplication.timeSinceStartup + IntervalSeconds;
-            ScreenCapture.CaptureScreenshot(Path);
+            ScreenCapture.CaptureScreenshot(Path, 3); // superSize 3: feet/hands adjudicable in crops
         }
     }
 }
