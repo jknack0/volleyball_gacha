@@ -86,7 +86,15 @@ Image-to-3D anime **heads/hair** are still the weak spot. For characters where t
 
 ### 3.6 Animation (shared set, retargeted)
 
-One humanoid clip set serves the entire cast. Sources: Mixamo (free) or Meshy's preset library; retarget via Unity Humanoid.
+One humanoid clip set serves the entire cast; retarget via Unity Humanoid. Source ladder, cheapest first [decided 2026-07-13]:
+
+1. **Volleyball packs (buy first):** Unity Asset Store has sport-specific humanoid packs — "Volley-ball animations (Motion Cast #14 Vol.1)", "Volleyball Actions" (Sports-Actions, mobile-optimized) — $10–40 covers the sport-specific core for the whole cast.
+2. **Preset libraries (free):** Mixamo / Meshy (500+) / Tripo (100+, API-retargetable) for idle, run, jump, generic celebrations.
+3. **Phone video mocap (free):** Rokoko Vision (single-camera, browser, free) or DeepMotion for anything the packs miss — air-perform the motion, get FBX. Good for big athletic motion; hands/fingers unusable (we don't animate them). Best candidates: the comedic per-character celebrations.
+4. **Cascadeur (free tier):** AI keyframing + physics engine — for custom hero moments AND as the cleanup/stylization tool for route 3.
+5. From-scratch Blender keyframing: PROHIBITED-by-default (slowest route, no payoff at our budget).
+
+**The stylization pass is the real work [structural for the 2XKO look]:** raw mocap/pack motion reads naturalistic = mushy under cel shading. Anime wants held poses, snapped transitions, exaggerated silhouettes — every accepted clip gets a pass (delete inbetweens, sharpen speed curves, push key poses; hours per clip, in Cascadeur or Unity's animation window). Contact frames align to sim contact ticks via a per-clip offset — VB-15 territory.
 
 | Clip | Used at |
 |---|---|
