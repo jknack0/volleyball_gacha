@@ -78,15 +78,16 @@ namespace VG.EditorTools
         private static void Build(string dir, string charId)
         {
             // Source rules [structural], learned the hard way:
-            // - Mesh + skeleton + clips ALL from the animated FBX: clips only bind cleanly on
-            //   their native hierarchy (cross-FBX Generic binding smeared mis-pathed islands;
-            //   Humanoid remap mangled head/feet). Blender UV test confirms retarget keeps UVs.
-            // - Texture NEVER from the animated FBX: Tripo's retarget ships a garbled atlas.
+            // - unity_model.fbx (tools/blender_unity_prep.py output) is THE import: one armature,
+            //   one mesh, clean-named takes, normalized axes. Raw Tripo FBXs are fallbacks only.
+            // - Texture NEVER from an animated FBX: Tripo's retarget ships a garbled atlas.
+            string preppedFbx = $"{dir}/unity_model.fbx";
             string animFbx = $"{dir}/tripo_anim_model.fbx";
             string riggedFbx = $"{dir}/tripo_rigged_model.fbx";
             string staticFbx = $"{dir}/tripo_model_model.fbx";
-            string fallback = File.Exists(riggedFbx) ? riggedFbx : staticFbx;
-            string visualPath = File.Exists(animFbx) ? animFbx : fallback;
+            string visualPath = File.Exists(preppedFbx) ? preppedFbx
+                : File.Exists(animFbx) ? animFbx
+                : File.Exists(riggedFbx) ? riggedFbx : staticFbx;
             string clipsPath = visualPath;
             if (!File.Exists(visualPath))
             {

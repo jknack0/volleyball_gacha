@@ -103,6 +103,16 @@ namespace VG.Unity
             float alpha = Mathf.Clamp01((Time.time - Time.fixedTime) / Time.fixedDeltaTime);
             _ballView.position = Vector3.Lerp(_ballPrev, _ballCur, alpha);
 
+            // One-shot floor re-snap: the spawn-time snap measured the BIND pose; a few frames in,
+            // the Animator has posed the character (idle) and skinned bounds are trustworthy.
+            if (_charToSnap != null && --_charSnapCountdown <= 0)
+            {
+                var b = new Bounds(_charToSnap.position, Vector3.zero);
+                foreach (var r in _charToSnap.GetComponentsInChildren<Renderer>()) b.Encapsulate(r.bounds);
+                _charToSnap.position += Vector3.down * b.min.y;
+                _charToSnap = null;
+            }
+
             var kb = Keyboard.current;
             if (kb != null)
             {
@@ -206,6 +216,10 @@ namespace VG.Unity
             var go = Instantiate(prefab);
             go.name = charId;
 
+            // Accurate per-pose skinned bounds (default local bounds are bind-pose approximations).
+            foreach (var smr in go.GetComponentsInChildren<SkinnedMeshRenderer>())
+                smr.updateWhenOffscreen = true;
+
             // Normalize to ~1.75 m regardless of the generator's export scale [tunable].
             var bounds = new Bounds(go.transform.position, Vector3.zero);
             foreach (var r in go.GetComponentsInChildren<Renderer>()) bounds.Encapsulate(r.bounds);
@@ -219,8 +233,13 @@ namespace VG.Unity
 
             go.transform.position = new Vector3(slot.X, lift, slot.Z);
             go.transform.rotation = Quaternion.LookRotation(slot.Z < 0f ? Vector3.forward : Vector3.back);
+            _charToSnap = go.transform;
+            _charSnapCountdown = 3; // frames until the Animator has evaluated the idle pose [tunable]
             return true;
         }
+
+        private Transform _charToSnap;
+        private int _charSnapCountdown;
 
         private void ApplyToon(GameObject go, Color baseColor, bool outline)
         {
