@@ -25,7 +25,10 @@ namespace VG.EditorTools
         {
             if (!assetPath.StartsWith(Root)) return;
             var importer = (ModelImporter)assetImporter;
-            importer.animationType = ModelImporterAnimationType.Human;
+            // Generic, NOT Humanoid [structural]: visual + clip FBXs come from the same Tripo rig
+            // task, so bone names match 1:1 and Generic plays clips exactly as authored. Humanoid's
+            // avatar remap guessed axes wrong on the generated skeleton (backwards head, warped feet).
+            importer.animationType = ModelImporterAnimationType.Generic;
             importer.importAnimation = true;
             importer.materialImportMode = ModelImporterMaterialImportMode.None; // we assign VG/Toon ourselves
         }
@@ -87,6 +90,12 @@ namespace VG.EditorTools
                 Debug.LogWarning($"VG: {charId}: no tripo FBX found, skipping.");
                 return;
             }
+
+            // Re-run the postprocessor on both FBXs so importer-setting changes (e.g. the
+            // Humanoid→Generic switch) apply without a manual right-click→Reimport.
+            AssetDatabase.ImportAsset(visualPath, ImportAssetOptions.ForceUpdate);
+            if (clipsPath != visualPath)
+                AssetDatabase.ImportAsset(clipsPath, ImportAssetOptions.ForceUpdate);
 
             // --- texture atlas: NEVER from the animated FBX (garbled) ---
             Texture2D atlas = FindOrExtractTexture(dir, staticFbx, riggedFbx);
